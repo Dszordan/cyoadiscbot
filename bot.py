@@ -2,9 +2,13 @@
 import os
 import random
 import discord
+from discord import message
 from discord.ext.commands import context
+from discord.ext.commands.core import check
 import emoji
 import regex
+from model import decision, decision_state
+from file_persistence import file_persistence
 from discord import Embed, Colour
 from typing import Union
 from discord.ext import commands
@@ -13,6 +17,7 @@ from dotenv import load_dotenv
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 GUILD = os.getenv('DISCORD_GUILD')
+state_management = file_persistence('newfile.yaml')
 
 # client = discord.Client()
 bot = commands.Bot(command_prefix='!')
@@ -35,32 +40,47 @@ async def rolldice(ctx, number_of_dice: int, number_of_sides: int):
     await ctx.send(', '.join(dice))
 
 @bot.command(name='preparedecision')
-async def prepare_decision(ctx, body: str, *decisions: Union[discord.Emoji, discord.PartialEmoji, str]):
-    actions = []
-    body+='\n'
-    for decision in decisions:
-        print(decision)
-        emoji = decision.split('|')[0]
-        description = decision.split('|')[1]
-        actions.append({
+async def prepare_decision(ctx, body: str, *actions: Union[discord.Emoji, discord.PartialEmoji, str]):
+    parsed_actions = []
+    rich_body = body + '\n'
+    for action in actions:
+        print(action)
+        emoji = action.split('|')[0]
+        description = action.split('|')[1]
+        parsed_actions.append({
             'glyph': emoji,
             'description': description
         })
-        body+=emoji + ' = ' + description + '\n' 
+        rich_body+=emoji + ' = ' + description + '\n'
+    # create decision model
+    d = decision(1, body, parsed_actions)
+    state_management.write_state([d])
     emb = Embed(
-        description=body,
+        description=rich_body,
         colour=discord.Colour.blue()
         ).set_thumbnail(url='https://www.dndbeyond.com/avatars/13704/589/1581111423-38596430.jpeg?width=150&height=150&fit=crop&quality=95&auto=webp'
         ).set_author(name=ctx.author.name,icon_url=ctx.author.avatar_url)
-    decision_body = await ctx.channel.send(
-        content=body,
+    decision_message = await ctx.channel.send(
+        content=rich_body,
         embed=emb)
-    for action in actions:
+    for action in parsed_actions:
         print(action['glyph'] + ' ' + action['description'])
-        await decision_body.add_reaction(action['glyph'])
+        await decision_message.add_reaction(action['glyph'])
 
-# def create_actions(emojis):
-
+@bot.command(name='viewdecisions')
+async def view_decisions(ctx, decision_state: str = decision_state.PREPARATION):
+    state = state_management.get_state()
+    choices = []
+    message_str = 'Found decision(s), which one do you want to view:'
+    for decision in state:
+        choices.append(decision)
+        message_str += f'\n [{len(choices)}] {str(decision.body)[0:20]}'
+    def check(m):
+        return int(m.content) in [1,2,3,4] and m.channel == ctx.channel
+    await ctx.send(message_str)
+    msg = await bot.wait_for("message", check=check)
+    display_decision = choices[int(msg.content) - 1]
+    await ctx.send(f"Viewing {display_decision.id}, {display_decision.body} ")
 
 def split_count(text):
     emoji_list = []
@@ -71,17 +91,10 @@ def split_count(text):
 
     return emoji_list
 
-# @client.event
+# @bot.event
 # async def on_message(message):
-#     if message.author.name != client.user.name:
-#         print(message.content)
-#         if str(message.content).find('xyz') != -1:
-#             print('message contains xyz')
-#             try:
-#                 await message.author.create_dm()
-#             except:
-#                 pass
-#             await message.author.dm_channel.send(f'Greetings, thanks for the message: {message.content}')
+#     if message.author.name != bot.user.name:
+        
 
 # @client.event
 # async def on_error(event, *args, **kwargs):
