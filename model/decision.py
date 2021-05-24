@@ -1,12 +1,13 @@
 from enum import Enum
-class decision_state(Enum):
+class DecisionState(Enum):
     PREPARATION = 1
     DEPLOYED = 2
     RESOLVED = 3
 
-class decision:
+class Decision:
     def __init__(self, id, body, actions):
         self.id = id
         self.body = body
         self.actions = actions
-        self.state = decision_state.PREPARATION
+        self.state = DecisionState.PREPARATION
+    

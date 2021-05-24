@@ -10,6 +10,13 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal"
+        },
+        {
+            "name": "Python: Bot.py",
+            "type": "python",
+            "request": "launch",
+            "program":  "${workspaceFolder}/bot.py",
+            "console": "integratedTerminal"
         }
     ]
 }
