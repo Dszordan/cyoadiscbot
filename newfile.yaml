@@ -1,10 +1,8 @@
 - !!python/object:model.decision.Decision
   actions:
-  - description: Hill
-    glyph: "\U0001F5FB"
-  - description: Path
-    glyph: "\U0001F6E4\uFE0F"
-  body: You survey the landscape and see a path to your west and a hill to your north.
+  - description: test
+    glyph: "\U0001F3BD"
+  body: testing
   id: 1
   state: !!python/object/apply:model.decision.DecisionState
   - 1

@@ -1,23 +1,41 @@
+"""
+    A Discord Cog that is a collection of commands related to managing Decisions.
+"""
 import asyncio
+import typing
 
 from discord import Emoji, PartialEmoji
 from discord.ext import commands
-import typing
 
 from file_persistence import file_persistence
 from model.decision import Decision, DecisionState
-from utils.embeds import DefaultEmbed
+from utils.display import DecisionDisplay
+from utils.embeds import DefaultEmbed, CharacterEmbed
 
 class Decisions(commands.Cog):
-
+    """
+    A Discord Cog that is a collection of commands related to managing Decisions.
+    params:
+        bot: The bot that uses these commands.
+        state_management: The state management object responsible for persisting
+            Decisions' state.
+    """
     def __init__(self, bot, state_management: file_persistence):
         self.bot = bot
         self.state_management = state_management
-    
+
     @commands.command(name='preparedecision')
-    async def prepare_decision(self, ctx, body: str, *actions: typing.Union[Emoji, PartialEmoji, str]):
+    async def prepare_decision(
+        self, ctx, body: str, *actions: typing.Union[Emoji, PartialEmoji, str]):
+        """
+        Prepare a new decision and persist it to state management.
+        params:
+            ctx: The context in which the command has been executed within.
+            body: The content to put in the decision
+            actions: The emojis that make up the reactions to the decision,
+                In the form emoji|description emoji|description
+        """
         parsed_actions = []
-        rich_body = body + '\n'
 
         # Parse actions
         for action in actions:
@@ -28,44 +46,44 @@ class Decisions(commands.Cog):
                 'glyph': emoji,
                 'description': description
             })
-            rich_body+=emoji + ' = ' + description + '\n'
 
         # create decision model
-        d = Decision(1, body, parsed_actions)
-        self.state_management.write_state([d])
-        
-        # create embed
-        emb = DefaultEmbed(ctx)
-        emb.description = rich_body
-        
-        # Send embed
-        decision_message = await ctx.channel.send(
-            content=rich_body,
-            embed=emb)
+        decision = Decision(1, body, parsed_actions)
+        self.state_management.write_state([decision])
 
-        # Add reactions to embed
-        for action in parsed_actions:
-            print(action['glyph'] + ' ' + action['description'])
-            await decision_message.add_reaction(action['glyph'])
+        # Display decision
+        await DecisionDisplay(decision, ctx, ctx.channel).send_message()
 
     @commands.command(name='viewdecisions')
     async def view_decisions(self, ctx, decision_state: str = DecisionState.PREPARATION):
+        """
+        View stored decisions filtering on its state.
+        params:
+            ctx: The Discord context in which the command has been executed within.
+            decision_state: The state to filter decisions on.
+        """
         decisions = self.find_decisions(decision_state=decision_state)
         choices = []
-        message_str = 'Found decision(s), which one do you want to view:'
-        
+        message_str = 'Found decision(s), which one do you want to view. (c to cancel):'
+
         # If multiple decisions are found, list each and have user select one
         for decision in decisions:
             choices.append(decision)
-            message_str += f'\n [{len(choices)}] {str(decision.body)[0:20]}'
-        
+            message_str += f'\n **[{len(choices)}]** {str(decision.body)[0:20]}'
+
         # Ensure selection is within the bounds of choice
-        def check(m):
-            return int(m.content) in [1,2,3,4] and m.channel == ctx.channel
-        
+        def check(msg):
+            valid = [str(v) for v in range(1, len(choices) + 1)] + ["c"]
+            return msg.channel == ctx.channel \
+                and msg.author == ctx.author \
+                and msg.content.lower() in valid
+
         # Send choices, await a legitimate response
-        await ctx.send(message_str)
-        
+        emb = DefaultEmbed(ctx)
+        emb.description = message_str
+        emb.title = 'Multiple Matches Found'
+        await ctx.send(embed=emb)
+
         response = ''
         try:
             response = await self.bot.wait_for("message", timeout=30, check=check)
@@ -74,29 +92,42 @@ class Decisions(commands.Cog):
 
         # Display decision
         if response:
-            display_decision = choices[int(msg.content) - 1]
-            await ctx.send(f"Viewing {display_decision.id}, {display_decision.body} ")
-        else:
+            if response.content == 'c':
+                response = None
+            else:
+                display_decision = choices[int(response.content) - 1]
+                await DecisionDisplay(display_decision, ctx, ctx.channel).send_message()
+        if response is None:
             await ctx.send("Selection timed out or was canceled.")
 
     @commands.command(name='publishdecision')
-    async def publish_decision(self, ctx, timeout: int):
+    async def publish_decision(self, ctx, timeout: int = 120):
+        """
+        Change a Decision to the PUBLISHED state and deliver the Decision to the publish channel.
+        params:
+            ctx: The Discord context in which the command has been executed within.
+            timeout: The amount of time that the Decision can be voted upon.
+        """
         decisions = self.find_decisions(decision_state=DecisionState.PREPARATION)
         choices = []
         message_str = 'Found decision(s), which one do you want to publish:'
-        
+        publish_channel = 'public-channel'
+
         # If multiple decisions are found, list each and have user select one
         for decision in decisions:
             choices.append(decision)
             message_str += f'\n [{len(choices)}] {str(decision.body)[0:20]}'
-        
+
         # Ensure selection is within the bounds of choice
-        def check(m):
-            return int(m.content) in [1,2,3,4] and m.channel == ctx.channel
-        
+        def check(msg):
+            valid = [str(v) for v in range(1, len(choices) + 1)] + ["c"]
+            return msg.channel == ctx.channel \
+                and msg.author == ctx.author \
+                and msg.content.lower() in valid
+
         # Send choices, await a legitimate response
         await ctx.send(message_str)
-        
+
         response = ''
         try:
             response = await self.bot.wait_for("message", timeout=30, check=check)
@@ -105,30 +136,59 @@ class Decisions(commands.Cog):
 
         # Display decision
         if response:
-            display_decision = choices[int(msg.content) - 1]
-            decision_message = await ctx.send(f"Viewing {display_decision.id}, {display_decision.body} ")
-            # Add reactions to embed
-            for action in parsed_actions:
-                print(action['glyph'] + ' ' + action['description'])
-                await decision_message.add_reaction(action['glyph'])
+            display_decision = choices[int(response.content) - 1]
+            await DecisionDisplay(display_decision, ctx, ctx.channel).send_message()
+
+            def publish_check(msg):
+                return msg.content in ['y','n'] and msg.channel == ctx.channel
+
+            message = f"Do you wish to publish the above Decision to {publish_channel}?" + \
+                "\n [y] = Publish this decision to {publish_channel}."  + \
+                "\n [n] = Continue editing the Decision."
+            await ctx.send(message)
+            publish_response = ''
+            try:
+                publish_response = await self.bot.wait_for(
+                    "message", timeout=30, check=publish_check)
+            except asyncio.TimeoutError:
+                publish_response = None
+
+            if publish_response.content:
+                if publish_response.content == 'y':
+                    channel = next(
+                        (x for x in ctx.guild.channels if x.name == publish_channel), None)
+                    await channel.send('test')
+                    # TODO: set state of decision to published
+                else:
+                    publish_response = None
+            if publish_response is None:
+                await ctx.send('Selection timed out or was canceled.')
+
         else:
             await ctx.send("Selection timed out or was canceled.")
 
-    
-    def find_decisions(self, id = None, decision_state = None):
+    def find_decisions(self, decision_id = None, decision_state = None):
+        """
+        Find a Decision in state management based on filter criteria.
+        params:
+            id: The unique identifier of a Decision to filter the results with.
+            decision_state: The state of Decisions to filter the results with.
+        """
         state = self.state_management.get_state()
         decisions = []
 
-        if id:
+        if decision_id:
             for decision in state:
-                if decision.id == id:
+                if decision.id == decision_id:
                     return decision
-        
-        elif state:
+                # TODO: Handle scenario where none are found of this id
+
+        elif decision_state:
             for decision in state:
                 if decision.state == decision_state:
                     decisions.append(decision)
+                # TODO: Handle scenario where none are found of this state
             return decisions
-        
+
         else:
             return state

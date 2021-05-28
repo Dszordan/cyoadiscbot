@@ -1,5 +1,7 @@
 {
-    "python.pythonPath": "/Users/jordan.burnett/.virtualenvs/py3/bin/python",
-    "python.linting.enabled": true,
-    "python.linting.pylintEnabled": true
+    "python.pythonPath": "/home/jordan/.venv/bin/python3.8",
+    "python.linting.enabled": false,
+    "python.linting.pylintEnabled": true,
+    "python.analysis.extraPaths": ["${workspaceFolder}/cyoadiscbot/utils"],
+    "python.linting.pylintPath": "/home/jordan/.venv/bin/pylint"
 }
