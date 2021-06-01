@@ -36,6 +36,7 @@ class Decision:
         self.body = body
         self.actions = actions
         self.state = DecisionState.PREPARATION
+        self.timeout = None
 
     def get_next_decisions(self):
         """

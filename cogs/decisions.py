@@ -2,6 +2,7 @@
     A Discord Cog that is a collection of commands related to managing Decisions.
 """
 import asyncio
+import datetime
 import typing
 
 from discord import Emoji, PartialEmoji
@@ -152,7 +153,7 @@ class Decisions(commands.Cog):
                 if publish_response.content == 'y':
                     channel = next(
                         (x for x in ctx.guild.channels if x.name == publish_channel), None)
-                    await channel.send('test')
+                    await DecisionDisplayEmbed(display_decision, ctx, channel).send_message()
                     # TODO: set state of decision to published
                 else:
                     publish_response = None
@@ -187,3 +188,54 @@ class Decisions(commands.Cog):
 
         else:
             return state
+
+    @commands.command(name='pt')
+    async def pt(self, ctx, timeout: int = 120):
+        """
+        Change a Decision to the PUBLISHED state and deliver the Decision to the publish channel.
+        params:
+            ctx: The Discord context in which the command has been executed within.
+            timeout: The amount of time that the Decision can be voted upon.
+        """
+        choices = []
+        dates = [
+            datetime.datetime.now(),
+            datetime.datetime.now()+datetime.timedelta(minutes=30),
+            datetime.datetime.now()+datetime.timedelta(minutes=60),
+            datetime.datetime.now()+datetime.timedelta(minutes=90),
+            datetime.datetime.now()+datetime.timedelta(minutes=120),
+        ]
+        message_str = 'What time do you want to publish at?'
+
+        # If multiple decisions are found, list each and have user select one
+        for date in dates:
+            rounded_date = round_time(date,datetime.timedelta(minutes=30), to='up')
+            choices.append(rounded_date)
+            message_str += f'\n [**{len(choices)}**] {str(rounded_date)}'
+
+        await GenericDisplayEmbed('Time', message_str, ctx.channel).send_message()
+
+def round_time(date=None, date_delta=datetime.timedelta(minutes=1), to='average'):
+    """
+    Round a datetime object to a multiple of a timedelta
+    date : datetime.datetime object, default now.
+    dateDelta : timedelta object, we round to a multiple of this, default 1 minute.
+    from:  http://stackoverflow.com/questions/3463930/how-to-round-the-minute-of-a-datetime-object-python
+    """
+    round_to = date_delta.total_seconds()
+    if date is None:
+        date = datetime.datetime.now()
+    seconds = (date - date.min).seconds
+
+    if seconds % round_to == 0 and date.microsecond == 0:
+        rounding = (seconds + round_to / 2) // round_to * round_to
+    else:
+        if to == 'up':
+            # // is a floor division, not a comment on following line (like in javascript):
+            rounding = (seconds + date.microsecond/1000000 + round_to) // round_to * round_to
+        elif to == 'down':
+            rounding = seconds // round_to * round_to
+        else:
+            rounding = (seconds + round_to / 2) // round_to * round_to
+
+    return date + datetime.timedelta(0, rounding - seconds, - date.microsecond)
