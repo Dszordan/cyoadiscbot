@@ -14,7 +14,7 @@ from file_persistence import file_persistence
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 GUILD = os.getenv('DISCORD_GUILD')
-state_management = file_persistence('newfile.yaml')
+state_management = file_persistence('testfile.yaml')
 
 # client = discord.Client()
 bot = commands.Bot(command_prefix='!')

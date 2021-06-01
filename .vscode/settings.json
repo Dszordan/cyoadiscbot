@@ -1,6 +1,6 @@
 {
-    "python.pythonPath": "/home/jordan/.venv/bin/python3.8",
-    "python.linting.enabled": false,
+    "python.pythonPath": "/home/jordan/.venv/bin/python3",
+    "python.linting.enabled": true,
     "python.linting.pylintEnabled": true,
     "python.analysis.extraPaths": ["${workspaceFolder}/cyoadiscbot/utils"],
     "python.linting.pylintPath": "/home/jordan/.venv/bin/pylint"

@@ -1,8 +1,0 @@
-- !!python/object:model.decision.Decision
-  actions:
-  - description: test
-    glyph: "\U0001F3BD"
-  body: testing
-  id: 1
-  state: !!python/object/apply:model.decision.DecisionState
-  - 1

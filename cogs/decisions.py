@@ -8,9 +8,8 @@ from discord import Emoji, PartialEmoji
 from discord.ext import commands
 
 from file_persistence import file_persistence
-from model.decision import Decision, DecisionState
-from utils.display import DecisionDisplay
-from utils.embeds import DefaultEmbed, CharacterEmbed
+from model.decision import Decision, DecisionState, Action
+from utils.display import DecisionDisplayEmbed, GenericDisplayEmbed
 
 class Decisions(commands.Cog):
     """
@@ -42,17 +41,14 @@ class Decisions(commands.Cog):
             print(action)
             emoji = action.split('|')[0]
             description = action.split('|')[1]
-            parsed_actions.append({
-                'glyph': emoji,
-                'description': description
-            })
+            parsed_actions.append(Action(emoji, description))
 
         # create decision model
-        decision = Decision(1, body, parsed_actions)
+        decision = Decision(body, parsed_actions)
         self.state_management.write_state([decision])
 
         # Display decision
-        await DecisionDisplay(decision, ctx, ctx.channel).send_message()
+        await DecisionDisplayEmbed(decision, ctx, ctx.channel).send_message()
 
     @commands.command(name='viewdecisions')
     async def view_decisions(self, ctx, decision_state: str = DecisionState.PREPARATION):
@@ -64,12 +60,12 @@ class Decisions(commands.Cog):
         """
         decisions = self.find_decisions(decision_state=decision_state)
         choices = []
-        message_str = 'Found decision(s), which one do you want to view. (c to cancel):'
+        message_str = 'Found Decision(s), which one do you want to view. (c to cancel):'
 
         # If multiple decisions are found, list each and have user select one
         for decision in decisions:
             choices.append(decision)
-            message_str += f'\n **[{len(choices)}]** {str(decision.body)[0:20]}'
+            message_str += f'\n [**{len(choices)}**] {str(decision.body)[0:20]}'
 
         # Ensure selection is within the bounds of choice
         def check(msg):
@@ -79,10 +75,7 @@ class Decisions(commands.Cog):
                 and msg.content.lower() in valid
 
         # Send choices, await a legitimate response
-        emb = DefaultEmbed(ctx)
-        emb.description = message_str
-        emb.title = 'Multiple Matches Found'
-        await ctx.send(embed=emb)
+        await GenericDisplayEmbed('Multiple Matches Found', message_str, ctx.channel).send_message()
 
         response = ''
         try:
@@ -96,13 +89,14 @@ class Decisions(commands.Cog):
                 response = None
             else:
                 display_decision = choices[int(response.content) - 1]
-                await DecisionDisplay(display_decision, ctx, ctx.channel).send_message()
+                await DecisionDisplayEmbed(display_decision, ctx, ctx.channel).send_message()
         if response is None:
             await ctx.send("Selection timed out or was canceled.")
 
     @commands.command(name='publishdecision')
     async def publish_decision(self, ctx, timeout: int = 120):
         """
+        TODO: Implement timeout
         Change a Decision to the PUBLISHED state and deliver the Decision to the publish channel.
         params:
             ctx: The Discord context in which the command has been executed within.
@@ -116,7 +110,7 @@ class Decisions(commands.Cog):
         # If multiple decisions are found, list each and have user select one
         for decision in decisions:
             choices.append(decision)
-            message_str += f'\n [{len(choices)}] {str(decision.body)[0:20]}'
+            message_str += f'\n [**{len(choices)}**] {str(decision.body)[0:20]}'
 
         # Ensure selection is within the bounds of choice
         def check(msg):
@@ -126,7 +120,8 @@ class Decisions(commands.Cog):
                 and msg.content.lower() in valid
 
         # Send choices, await a legitimate response
-        await ctx.send(message_str)
+        await GenericDisplayEmbed('Multiple Decisions Found',
+                                    message_str, ctx.channel).send_message()
 
         response = ''
         try:
@@ -137,15 +132,15 @@ class Decisions(commands.Cog):
         # Display decision
         if response:
             display_decision = choices[int(response.content) - 1]
-            await DecisionDisplay(display_decision, ctx, ctx.channel).send_message()
+            await DecisionDisplayEmbed(display_decision, ctx, ctx.channel).send_message()
 
             def publish_check(msg):
                 return msg.content in ['y','n'] and msg.channel == ctx.channel
 
-            message = f"Do you wish to publish the above Decision to {publish_channel}?" + \
-                "\n [y] = Publish this decision to {publish_channel}."  + \
-                "\n [n] = Continue editing the Decision."
-            await ctx.send(message)
+            message = f"Do you wish to publish the above Decision to **{publish_channel}**?" + \
+                f"\n [**y**] = Publish this decision to **{publish_channel}**."  + \
+                "\n [**n**] = Continue editing the Decision."
+            await GenericDisplayEmbed('Confirm Publication', message, ctx.channel).send_message()
             publish_response = ''
             try:
                 publish_response = await self.bot.wait_for(
