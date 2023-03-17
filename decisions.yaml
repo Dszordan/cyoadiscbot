@@ -1,0 +1,13 @@
+- !!python/object:model.decision.Decision
+  actions:
+  - !!python/object:model.decision.Action
+    description: test
+    glyph: "\U0001F972"
+    id_: 3T7fRukMh3EAVoXZCy7yHv
+    next_decision: null
+    previous_decision: null
+  body: test
+  id_: Gwkq6aCqtRgL7i3NRTkHeX
+  state: !!python/object/apply:model.decision.DecisionState
+  - 2
+  timeout: null

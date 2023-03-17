@@ -63,6 +63,7 @@ class Action:
             glyph,
             description,
             next_decision = None,
+            previous_decision = None,
             id_ = None
         ):
         self.id_ = id_
@@ -71,4 +72,5 @@ class Action:
         self.glyph = glyph
         self.description = description
         self.next_decision = next_decision
+        self.previous_decision = previous_decision
     

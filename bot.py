@@ -18,17 +18,12 @@ from file_persistence import file_persistence
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 GUILD = os.getenv('DISCORD_GUILD')
-admin_state_management = file_persistence('admin.yaml')
-state_management = file_persistence('descisions.yaml')
+state_management = file_persistence()
 
 intents = discord.Intents.default()
 intents.message_content = True
 
 bot = commands.Bot(command_prefix='$', intents=intents)
-
-# bot.add_cog(Decisions(bot, state_management))
-# bot.add_cog(CommandErrorHandler(bot))
-
 
 @bot.event
 async def on_ready():
@@ -47,11 +42,10 @@ async def rolldice(ctx, number_of_dice: int, number_of_sides: int):
 async def rolldice_error(ctx, error):
     await ctx.send(f'Sorry, I couldn\'t roll dice for you. Error: {error}')
 
-async def load():
-    await bot.add_cog(AdminTools(bot, admin_state_management))
-
 async def main():
-    await load()
+    await bot.add_cog(AdminTools(bot, state_management))
+    await bot.add_cog(Decisions(bot, state_management))
+    await bot.add_cog(CommandErrorHandler(bot))
 
 asyncio.run(main())
 bot.run(TOKEN, log_handler=handler, log_level=logging.DEBUG)

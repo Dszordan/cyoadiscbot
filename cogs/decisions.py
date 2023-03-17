@@ -46,7 +46,9 @@ class Decisions(commands.Cog):
 
         # create decision model
         decision = Decision(body, parsed_actions)
-        self.state_management.write_state([decision])
+        decisions = self.state_management.get_state()
+        decisions['decisions'].append(decision)
+        self.state_management.write_state(decisions)
 
         # Display decision
         await DecisionDisplayEmbed(decision, ctx, ctx.channel).send_message()
@@ -97,71 +99,61 @@ class Decisions(commands.Cog):
     @commands.command(name='publishdecision')
     async def publish_decision(self, ctx, timeout: int = 120):
         """
-        TODO: Implement timeout
-        Change a Decision to the PUBLISHED state and deliver the Decision to the publish channel.
-        params:
-            ctx: The Discord context in which the command has been executed within.
-            timeout: The amount of time that the Decision can be voted upon.
+        Changes a Decision to the PUBLISHED state and delivers the Decision to the publish channel.
+        :param ctx: The Discord context in which the command has been executed within.
+        :param timeout: The amount of time that the Decision can be voted upon.
+        :return: None
         """
+        # Find all Decisions in the PREPARATION state
         decisions = self.find_decisions(decision_state=DecisionState.PREPARATION)
         choices = []
-        message_str = 'Found decision(s), which one do you want to publish:'
-        publish_channel = 'public-channel'
+        admin_state = self.state_management.get_admin_state()
+        publish_channel = admin_state['channels']['publish']
 
-        # If multiple decisions are found, list each and have user select one
-        for decision in decisions:
+        # Display choices
+        message_str = "Found decision(s), which one do you want to publish:\n"
+        for i, decision in enumerate(decisions):
             choices.append(decision)
-            message_str += f'\n [**{len(choices)}**] {str(decision.body)[0:20]}'
+            message_str += f"[**{i+1}**] {str(decision.body)[0:20]}\n"
+        message_str += "Type a number between 1 and {} to select a decision, or type 'c' to cancel.".format(len(choices))
+        await GenericDisplayEmbed('Multiple Decisions Found', message_str, ctx.channel).send_message()
 
-        # Ensure selection is within the bounds of choice
+        # Wait for valid selection
         def check(msg):
-            valid = [str(v) for v in range(1, len(choices) + 1)] + ["c"]
-            return msg.channel == ctx.channel \
-                and msg.author == ctx.author \
-                and msg.content.lower() in valid
-
-        # Send choices, await a legitimate response
-        await GenericDisplayEmbed('Multiple Decisions Found',
-                                    message_str, ctx.channel).send_message()
-
-        response = ''
+            return msg.channel == ctx.channel and msg.author == ctx.author \
+                and msg.content.lower() in [str(i) for i in range(1, len(choices) + 1)] + ["c"]
         try:
             response = await self.bot.wait_for("message", timeout=30, check=check)
         except asyncio.TimeoutError:
-            response = None
+            await ctx.send('Selection timed out.')
+            return
 
-        # Display decision
-        if response:
-            display_decision = choices[int(response.content) - 1]
-            await DecisionDisplayEmbed(display_decision, ctx, ctx.channel).send_message()
-
-            def publish_check(msg):
-                return msg.content in ['y','n'] and msg.channel == ctx.channel
-
-            message = f"Do you wish to publish the above Decision to **{publish_channel}**?" + \
-                f"\n [**y**] = Publish this decision to **{publish_channel}**."  + \
-                "\n [**n**] = Continue editing the Decision."
-            await GenericDisplayEmbed('Confirm Publication', message, ctx.channel).send_message()
-            publish_response = ''
-            try:
-                publish_response = await self.bot.wait_for(
-                    "message", timeout=30, check=publish_check)
-            except asyncio.TimeoutError:
-                publish_response = None
-
-            if publish_response.content:
-                if publish_response.content == 'y':
-                    channel = next(
-                        (x for x in ctx.guild.channels if x.name == publish_channel), None)
-                    await DecisionDisplayEmbed(display_decision, ctx, channel).send_message()
-                    # TODO: set state of decision to published
-                else:
-                    publish_response = None
-            if publish_response is None:
-                await ctx.send('Selection timed out or was canceled.')
-
+        # Publish selected decision
+        if response.content.lower() == "c":
+            await ctx.send("Canceled.")
         else:
-            await ctx.send("Selection timed out or was canceled.")
+            selected_decision = choices[int(response.content) - 1]
+            await DecisionDisplayEmbed(selected_decision, ctx, ctx.channel).send_message()
+
+            # Confirm publication
+            message = f"Do you wish to publish the above Decision to **{publish_channel}**?\n" + \
+                f"[**y**] = Publish this decision to **{publish_channel}**\n" + \
+                f"[**n**] = Continue editing the Decision"
+            await GenericDisplayEmbed('Confirm Publication', message, ctx.channel).send_message()
+            try:
+                publish_response = await self.bot.wait_for("message", timeout=30, check=lambda m: m.author == ctx.author)
+            except asyncio.TimeoutError:
+                await ctx.send("Selection timed out.")
+                return
+
+            if publish_response.content.lower() == 'y':
+                # Find the 'public-channel' and display the decision
+                channel = next((x for x in ctx.guild.channels if x.name == publish_channel), None)
+                await DecisionDisplayEmbed(selected_decision, ctx, channel).send_message()
+                selected_decision.state = DecisionState.PUBLISHED
+                self.state_management.update_decision(selected_decision)
+            else:
+                await ctx.send("Canceled.")
 
     def find_decisions(self, decision_id = None, decision_state = None):
         """
@@ -171,6 +163,7 @@ class Decisions(commands.Cog):
             decision_state: The state of Decisions to filter the results with.
         """
         state = self.state_management.get_state()
+        print(state)
         decisions = []
 
         if decision_id:
@@ -180,7 +173,7 @@ class Decisions(commands.Cog):
                 # TODO: Handle scenario where none are found of this id
 
         elif decision_state:
-            for decision in state:
+            for decision in state['decisions']:
                 if decision.state == decision_state:
                     decisions.append(decision)
                 # TODO: Handle scenario where none are found of this state
