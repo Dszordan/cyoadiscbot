@@ -20,7 +20,7 @@ class DecisionDisplayEmbed():
         self.channel = channel
         self.decision = decision
 
-        rich_body = decision.body + '\n'
+        rich_body = '**' + decision.title + '**\n' + decision.body + '\n'
         for action in decision.actions:
             rich_body+=action.glyph + ' = ' + action.description + '\n'
 

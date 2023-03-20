@@ -24,17 +24,17 @@ class file_persistence:
             return decisions
     
     def update_decision(self, decision):
-        decisions = self.get_state()['decisions']
+        decisions = self.get_state()
         # Find index of object to replace in the list
         index = -1
-        for i, obj in enumerate(decisions):
+        for i, obj in enumerate(decisions['decisions']):
             if obj.id_ == decision.id_:
                 index = i
                 break
 
         if index != -1:
             # Replace object at the found index
-            decisions[index] = decision
+            decisions['decisions'][index] = decision
 
             self.write_state(decisions)
         else:

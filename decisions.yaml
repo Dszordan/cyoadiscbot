@@ -1,13 +1,15 @@
-- !!python/object:model.decision.Decision
+decisions:
+- &id001 !!python/object:model.decision.Decision
   actions:
   - !!python/object:model.decision.Action
-    description: test
-    glyph: "\U0001F972"
-    id_: 3T7fRukMh3EAVoXZCy7yHv
+    description: Rad Action
+    glyph: "\U0001F612"
+    id_: 3meXWNjQYozP8qr2QZYZ4h
     next_decision: null
-    previous_decision: null
-  body: test
-  id_: Gwkq6aCqtRgL7i3NRTkHeX
+    previous_decision: *id001
+  body: This is a cool body, too.
+  id_: 3UyzhB8fpokVStAkSiQk8o
   state: !!python/object/apply:model.decision.DecisionState
-  - 2
+  - 1
   timeout: null
+  title: Cool Title

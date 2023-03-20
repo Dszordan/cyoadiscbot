@@ -26,6 +26,7 @@ class Decision:
 
     def __init__(
             self,
+            title,
             body,
             actions,
             id_ = str(shortuuid.ShortUUID().random(length=22))
@@ -33,6 +34,7 @@ class Decision:
         self.id_ = id_
         if self.id_ is None:
             self.id_ = str(shortuuid.ShortUUID().random(length=22))
+        self.title = title
         self.body = body
         self.actions = actions
         self.state = DecisionState.PREPARATION

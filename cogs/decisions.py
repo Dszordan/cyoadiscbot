@@ -53,6 +53,138 @@ class Decisions(commands.Cog):
         # Display decision
         await DecisionDisplayEmbed(decision, ctx, ctx.channel).send_message()
 
+    @commands.command(name='modifydecision')
+    async def modify_decision(self, ctx):
+        """
+        Receive a list of decisions and modify properties of one of them..
+        params:
+            ctx: The Discord context in which the command has been executed within.
+        """
+        selected_decision = await self.choose_decision(ctx, state=DecisionState.PREPARATION)
+
+        message_str = "Which property do you wish to update? (c to cancel)\n"
+        message_str += "[**1**] Title\n"
+        message_str += "[**2**] Body\n"
+        message_str += "[**3**] Actions\n"
+        await GenericDisplayEmbed('Decision Property Update', message_str, ctx.channel).send_message()
+
+        response = await self.await_response(ctx, ['1','2','3'])
+
+        # Display decision
+        if response:
+            match response:
+                case '1':
+                    await GenericDisplayEmbed('Decision Title Update', 'What is the new title?', ctx.channel).send_message()
+                    response = await self.await_response(ctx)
+                    if response:
+                        selected_decision.title = response
+                        await self.update_decision(selected_decision)
+                case '2':
+                    await GenericDisplayEmbed('Decision Body Update', 'What is the new body?', ctx.channel).send_message()
+                    response = await self.await_response(ctx)
+                    if response:
+                        selected_decision.body = response
+                        await self.update_decision(selected_decision)
+                case '3':
+                    await self.modify_actions(ctx, selected_decision)
+            await DecisionDisplayEmbed(selected_decision, ctx, ctx.channel).send_message()
+
+    async def choose_decision(self, ctx, state = DecisionState.PREPARATION):
+        decisions = self.find_decisions(decision_state=state)
+        choices = []
+        message_str = 'Found Decision(s), which one do you want to select. (c to cancel):'
+
+        # If multiple decisions are found, list each and have user select one
+        for decision in decisions:
+            choices.append(decision)
+            message_str += f'\n [**{len(choices)}**] {str(decision.body)[0:20]}'
+
+        # Send choices, await a legitimate response
+        await GenericDisplayEmbed('Select Decision', message_str, ctx.channel).send_message()
+
+        response = await self.await_response(ctx, 
+            [str(v) for v in range(1, len(choices) + 1)] + ["c"])
+
+        # Display decision
+        if response:
+            selected_decision = choices[int(response) - 1]
+            await DecisionDisplayEmbed(selected_decision, ctx, ctx.channel).send_message()
+            return selected_decision
+
+    @commands.command(name='modifyactions')
+    async def modify_actions(self, ctx, decision = None):
+        selected_decision = decision
+        if not decision:
+            selected_decision = await self.choose_decision(ctx, DecisionState.PREPARATION)
+        
+        message_str = 'Which action do you want to modify? (c to cancel)\n'
+        choices = []
+        for index, action in enumerate(selected_decision.actions):
+            choices.append(action)
+            message_str += f'[**{index + 1}**] {action.glyph} = {action.description} \n'
+        message_str += '[**n**] Create new action.\n'
+        await GenericDisplayEmbed('Modify Action', message_str, ctx.channel).send_message()
+
+        response = await self.await_response(ctx, [str(v) for v in range(1, len(selected_decision.actions) + 1)] + ['n', 'c'])
+        if response:
+            if response == 'n':
+                await self.create_action(ctx, selected_decision)
+            else:
+                selected_action = choices[int(response) - 1)]
+                await self.update_action(ctx, selected_decision, selected_action)
+
+    async def create_action(self, ctx, decision):
+        message_str = 'Describe the action. (c to cancel)\n'
+        await GenericDisplayEmbed('Create Action', message_str, ctx.channel).send_message()
+        action_description = await self.await_response(ctx)
+        
+        message_str = 'Give the action a glyph/emoji (c to cancel)\n'
+        await GenericDisplayEmbed('Create Action', message_str, ctx.channel).send_message()
+        action_glyph = await self.await_response(ctx)
+
+        decision.actions.append(Action(glyph=action_glyph, description=action_description, previous_decision=decision))
+        await self.update_decision(decision)
+
+    async def update_action(self, ctx, decision, action):
+        message_str = 'Describe the action. (c to cancel)\n'
+        await GenericDisplayEmbed('Update Action', message_str, ctx.channel).send_message()
+        action_description = await self.await_response(ctx)
+        
+        message_str = 'Give the action a glyph/emoji (c to cancel)\n'
+        await GenericDisplayEmbed('Update Action', message_str, ctx.channel).send_message()
+        action_glyph = await self.await_response(ctx)
+
+        # Find action and update
+        decision.actions.append(Action(glyph=action_glyph, description=action_description, previous_decision=decision))
+        await self.update_decision(decision)
+
+    async def update_decision(self, decision):
+        await self.state_management.update_decision(decision)
+
+    async def await_response(self, ctx, valid_options = [], timeout = 30):
+        # Ensure selection is within the bounds of choice
+        def check(msg):
+            return msg.channel == ctx.channel \
+                and msg.author == ctx.author \
+                and msg.content.lower() in valid_options
+
+        response = ''
+        try:
+            if valid_options:
+                response = await self.bot.wait_for("message", timeout=timeout, check=check)
+            else:
+                response = await self.bot.wait_for("message", timeout=timeout)
+        except asyncio.TimeoutError:
+            response = None
+
+        # Display decision
+        if response:
+            if response.content == 'c':
+                response = None
+        if response is None:
+            await ctx.send("Selection timed out or was canceled.")
+        return response.content
+
     @commands.command(name='viewdecisions')
     async def view_decisions(self, ctx, decision_state: str = DecisionState.PREPARATION):
         """
@@ -151,7 +283,7 @@ class Decisions(commands.Cog):
                 channel = next((x for x in ctx.guild.channels if x.name == publish_channel), None)
                 await DecisionDisplayEmbed(selected_decision, ctx, channel).send_message()
                 selected_decision.state = DecisionState.PUBLISHED
-                self.state_management.update_decision(selected_decision)
+                await self.update_decision(selected_decision)
             else:
                 await ctx.send("Canceled.")
 
