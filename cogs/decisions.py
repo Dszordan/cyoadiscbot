@@ -130,7 +130,7 @@ class Decisions(commands.Cog):
             if response == 'n':
                 await self.create_action(ctx, selected_decision)
             else:
-                selected_action = choices[int(response) - 1)]
+                selected_action = choices[int(response) - 1]
                 await self.update_action(ctx, selected_decision, selected_action)
 
     async def create_action(self, ctx, decision):
@@ -155,11 +155,20 @@ class Decisions(commands.Cog):
         action_glyph = await self.await_response(ctx)
 
         # Find action and update
-        decision.actions.append(Action(glyph=action_glyph, description=action_description, previous_decision=decision))
-        await self.update_decision(decision)
+        action_index = -1
+        for index, act in enumerate(decision.actions):
+            if act.id_ == action.id_:
+                action_index = index
+        if action_index != -1:
+            decision.actions[action_index].description = action_description
+            decision.actions[action_index].glyph = action_glyph
+            decision.actions[action_index].previous_decision = decision
+            await self.update_decision(decision)
+        else:
+            print('could not find that action to update.')
 
     async def update_decision(self, decision):
-        await self.state_management.update_decision(decision)
+        self.state_management.update_decision(decision)
 
     async def await_response(self, ctx, valid_options = [], timeout = 30):
         # Ensure selection is within the bounds of choice

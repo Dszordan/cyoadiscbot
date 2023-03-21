@@ -2,8 +2,8 @@ decisions:
 - &id001 !!python/object:model.decision.Decision
   actions:
   - !!python/object:model.decision.Action
-    description: Rad Action
-    glyph: "\U0001F612"
+    description: Ultra Action
+    glyph: "\U0001F638"
     id_: 3meXWNjQYozP8qr2QZYZ4h
     next_decision: null
     previous_decision: *id001

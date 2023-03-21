@@ -13,6 +13,7 @@ handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w'
 from cogs.admin import AdminTools
 from cogs.decisions import Decisions
 from cogs.error_handler import CommandErrorHandler
+from cogs.scheduler import Scheduler
 from file_persistence import file_persistence
 
 load_dotenv()
@@ -46,6 +47,7 @@ async def main():
     await bot.add_cog(AdminTools(bot, state_management))
     await bot.add_cog(Decisions(bot, state_management))
     await bot.add_cog(CommandErrorHandler(bot))
+    await bot.add_cog(Scheduler(bot))
 
 asyncio.run(main())
 bot.run(TOKEN, log_handler=handler, log_level=logging.DEBUG)
