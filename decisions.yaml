@@ -9,6 +9,8 @@ decisions:
     previous_decision: *id001
   body: This is a cool body, too.
   id_: 3UyzhB8fpokVStAkSiQk8o
+  publish_time: '2023-03-21 21:42:55.695005'
+  resolve_time: '2023-03-21 23:00:00'
   state: !!python/object/apply:model.decision.DecisionState
   - 1
   timeout: null

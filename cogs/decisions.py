@@ -170,6 +170,7 @@ class Decisions(commands.Cog):
     async def update_decision(self, decision):
         self.state_management.update_decision(decision)
 
+    # Bot awaits for a response from the user.
     async def await_response(self, ctx, valid_options = [], timeout = 30):
         # Ensure selection is within the bounds of choice
         def check(msg):
@@ -259,42 +260,53 @@ class Decisions(commands.Cog):
         message_str += "Type a number between 1 and {} to select a decision, or type 'c' to cancel.".format(len(choices))
         await GenericDisplayEmbed('Multiple Decisions Found', message_str, ctx.channel).send_message()
 
-        # Wait for valid selection
-        def check(msg):
-            return msg.channel == ctx.channel and msg.author == ctx.author \
-                and msg.content.lower() in [str(i) for i in range(1, len(choices) + 1)] + ["c"]
-        try:
-            response = await self.bot.wait_for("message", timeout=30, check=check)
-        except asyncio.TimeoutError:
-            await ctx.send('Selection timed out.')
-            return
+        response = await self.await_response(ctx, [str(i) for i in range(1, len(choices) + 1)] + ["c"])
 
         # Publish selected decision
-        if response.content.lower() == "c":
-            await ctx.send("Canceled.")
-        else:
-            selected_decision = choices[int(response.content) - 1]
-            await DecisionDisplayEmbed(selected_decision, ctx, ctx.channel).send_message()
+        if not response:
+            await ctx.response('Canceled operation.')
+            return
+        
+        selected_decision = choices[int(response) - 1]
+        await DecisionDisplayEmbed(selected_decision, ctx, ctx.channel).send_message()
 
-            # Confirm publication
-            message = f"Do you wish to publish the above Decision to **{publish_channel}**?\n" + \
-                f"[**y**] = Publish this decision to **{publish_channel}**\n" + \
-                f"[**n**] = Continue editing the Decision"
-            await GenericDisplayEmbed('Confirm Publication', message, ctx.channel).send_message()
-            try:
-                publish_response = await self.bot.wait_for("message", timeout=30, check=lambda m: m.author == ctx.author)
-            except asyncio.TimeoutError:
-                await ctx.send("Selection timed out.")
-                return
+        # Confirm publication
+        message = f"Do you wish to publish the above Decision to **{publish_channel}**?\n" + \
+            f"[**y**] = Publish this decision to **{publish_channel}**\n" + \
+            f"[**n**] = Continue editing the Decision"
+        await GenericDisplayEmbed('Confirm Publication', message, ctx.channel).send_message()
+        response = await self.await_response(ctx, ['y','n','c'])
+        
+        if not response or response.lower() == 'n':
+            await ctx.send('Canceled operation.')
+            return
 
-            if publish_response.content.lower() == 'y':
-                # Find the 'public-channel' and display the decision
-                channel = next((x for x in ctx.guild.channels if x.name == publish_channel), None)
-                await DecisionDisplayEmbed(selected_decision, ctx, channel).send_message()
-                selected_decision.state = DecisionState.PUBLISHED
-                await self.update_decision(selected_decision)
-            else:
-                await ctx.send("Canceled.")
+        # TODO change the publish time to the RESOLVE TIME for when the action votes are tallied
+        choices = []
+        dates = [
+            datetime.datetime.now(),
+            datetime.datetime.now()+datetime.timedelta(minutes=30),
+            datetime.datetime.now()+datetime.timedelta(minutes=60),
+            datetime.datetime.now()+datetime.timedelta(minutes=90),
+            datetime.datetime.now()+datetime.timedelta(minutes=120),
+        ]
+        message_str = 'What time do you want to publish at?'
+
+        # If multiple decisions are found, list each and have user select one
+        for date in dates:
+            rounded_date = round_time(date,datetime.timedelta(minutes=30), to='up')
+            choices.append(rounded_date)
+            message_str += f'\n [**{len(choices)}**] {str(rounded_date)}'
+        await GenericDisplayEmbed('Time', message_str, ctx.channel).send_message()
+        response = await self.await_response(ctx, [str(i) for i in range(1, len(choices) + 1)] + ["c"])
+
+        # Find the 'public-channel' and display the decision
+        channel = next((x for x in ctx.guild.channels if x.name == publish_channel), None)
+        selected_decision.publish_time = str(datetime.datetime.now())
+        selected_decision.resolve_time = str(choices[int(response) - 1])
+        await self.update_decision(selected_decision)
+        await ctx.send(f'The following decision will publish to {channel} at {selected_decision.resolve_time}')
+        await DecisionDisplayEmbed(selected_decision, ctx, ctx.channel).send_message()
 
     def find_decisions(self, decision_id = None, decision_state = None):
         """
@@ -322,32 +334,16 @@ class Decisions(commands.Cog):
 
         else:
             return state
-
-    @commands.command(name='pt')
-    async def pt(self, ctx, timeout: int = 120):
-        """
-        Change a Decision to the PUBLISHED state and deliver the Decision to the publish channel.
-        params:
-            ctx: The Discord context in which the command has been executed within.
-            timeout: The amount of time that the Decision can be voted upon.
-        """
-        choices = []
-        dates = [
-            datetime.datetime.now(),
-            datetime.datetime.now()+datetime.timedelta(minutes=30),
-            datetime.datetime.now()+datetime.timedelta(minutes=60),
-            datetime.datetime.now()+datetime.timedelta(minutes=90),
-            datetime.datetime.now()+datetime.timedelta(minutes=120),
-        ]
-        message_str = 'What time do you want to publish at?'
-
-        # If multiple decisions are found, list each and have user select one
-        for date in dates:
-            rounded_date = round_time(date,datetime.timedelta(minutes=30), to='up')
-            choices.append(rounded_date)
-            message_str += f'\n [**{len(choices)}**] {str(rounded_date)}'
-
-        await GenericDisplayEmbed('Time', message_str, ctx.channel).send_message()
+        
+    async def check_time(self):
+        decisions = self.find_decisions(decision_state=DecisionState.PREPARATION)
+        for decision in decisions:
+            resolve_time = datetime.datetime.strptime(decision.resolve_time, "%Y-%m-%d %H:%M:%S")
+            if decision.resolve_time < datetime.datetime.now():
+                # publish
+                decision.state = DecisionState.PUBLISHED
+                await self.update_decision(decision)
+                await DecisionDisplayEmbed(selected_decision, ctx, ctx.channel).send_message()
 
 def round_time(date=None, date_delta=datetime.timedelta(minutes=1), to='average'):
     """

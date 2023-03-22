@@ -38,7 +38,8 @@ class Decision:
         self.body = body
         self.actions = actions
         self.state = DecisionState.PREPARATION
-        self.timeout = None
+        self.publish_time
+        self.resolve_time
 
     def get_next_decisions(self):
         """

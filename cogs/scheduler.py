@@ -1,38 +1,18 @@
-import logging
-
-import discord
-from discord.ext import commands
-
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from apscheduler.triggers.cron import CronTrigger
+from discord.ext import tasks, commands
 
 class Scheduler(commands.Cog):
-    """Schedule commands."""
     def __init__(self, bot):
+        self.index = 0
         self.bot = bot
 
-        # Initialize session
-        # self.session = aiohttp.ClientSession()
-        self.schedule()
-    
-    # Scheduled events
-    async def schedule_func(self):
-        print('schedule')
+    def cog_unload(self):
+        self.printer.cancel()
 
-    def schedule(self):
-        # Initialize scheduler
-        schedule_log = logging.getLogger("apscheduler")
-        schedule_log.setLevel(logging.WARNING)
+    @tasks.loop(seconds=5.0)
+    async def printer(self):
+        print(self.index)
+        self.index += 1
 
-        job_defaults = {
-            "coalesce": True,
-            "max_instances": 5,
-            "misfire_grace_time": 15,
-            "replace_existing": True,
-        }
-
-        scheduler = AsyncIOScheduler(job_defaults = job_defaults, 
-                          logger = schedule_log)
-
-        # Add jobs to scheduler
-        scheduler.add_job(self.schedule_func, CronTrigger.from_crontab("*/1 * * * *")) 
+    @commands.Cog.listener()
+    async def on_ready(self):
+        self.printer.start()
