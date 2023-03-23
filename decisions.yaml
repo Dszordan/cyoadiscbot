@@ -27,9 +27,21 @@ decisions:
     next_decision: null
     previous_decision: *id003
   - !!python/object:model.decision.Action
+    description: Read through the sheaf of papers.
+    glyph: "\U0001F9FB"
+    id_: Me6rm3QZ8TnyukHTSidYP2
+    next_decision: null
+    previous_decision: *id003
+  - !!python/object:model.decision.Action
+    description: Dance
+    glyph: "\U0001F483"
+    id_: fEYyskudJf86V8bz4K9FPm
+    next_decision: null
+    previous_decision: *id003
+  - !!python/object:model.decision.Action
     description: ''
-    glyph: Read through the sheaf of papers.
-    id_: ED9cEqMNGwYhguaQhJnafe
+    glyph: null
+    id_: 3hY2HmrHX4Hk6V6jQiushj
     next_decision: null
     previous_decision: *id003
   body: You hear yourself gasp, unsure if it's what woke you or if it were just a

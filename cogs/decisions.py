@@ -5,8 +5,10 @@ import asyncio
 import datetime
 import typing
 
+import discord
 from discord import Emoji, PartialEmoji
 from discord.ext import commands
+from discord.ext.commands import Context
 
 from file_persistence import file_persistence
 from model.decision import Decision, DecisionState, Action
@@ -20,30 +22,25 @@ class Decisions(commands.Cog):
         state_management: The state management object responsible for persisting
             Decisions' state.
     """
-    def __init__(self, bot, state_management: file_persistence):
+    def __init__(self,
+                 bot: commands.Bot,
+                 state_management: file_persistence):
         self.bot = bot
         self.state_management = state_management
 
+    # Bot Commands
     @commands.command(name='preparedecision')
-    async def prepare_decision(
-        self, ctx, title: str, body: str):
+    async def prepare_decision(self,
+                               ctx: Context,
+                               title: str,
+                               body: str):
         """
         Prepare a new decision and persist it to state management.
         params:
             ctx: The context in which the command has been executed within.
-            body: The content to put in the decision
-            actions: The emojis that make up the reactions to the decision,
-                In the form emoji|description emoji|description
+            title: The title of the decision.
+            body: The content of the decision.
         """
-        # parsed_actions = []
-
-        # # Parse actions
-        # for action in actions:
-        #     print(action)
-        #     emoji = action.split('|')[0]
-        #     description = action.split('|')[1]
-        #     parsed_actions.append(Action(emoji, description))
-
         # create decision model
         decision = Decision(title, body)
         decisions = self.state_management.get_state()
@@ -54,7 +51,8 @@ class Decisions(commands.Cog):
         await DecisionDisplayEmbed(decision, ctx.channel, ctx).send_message()
 
     @commands.command(name='modifydecision')
-    async def modify_decision(self, ctx):
+    async def modify_decision(self,
+                              ctx: Context):
         """
         Receive a list of decisions and modify properties of one of them..
         params:
@@ -89,30 +87,16 @@ class Decisions(commands.Cog):
                     await self.modify_actions(ctx, selected_decision)
             await DecisionDisplayEmbed(selected_decision, ctx.channel, ctx).send_message()
 
-    async def choose_decision(self, ctx, state = DecisionState.PREPARATION):
-        decisions = self.find_decisions(decision_state=state)
-        choices = []
-        message_str = 'Found Decision(s), which one do you want to select. (c to cancel):'
-
-        # If multiple decisions are found, list each and have user select one
-        for decision in decisions:
-            choices.append(decision)
-            message_str += f'\n [**{len(choices)}**] {str(decision.body)[0:20]}'
-
-        # Send choices, await a legitimate response
-        await GenericDisplayEmbed('Select Decision', message_str, ctx.channel).send_message()
-
-        response = await self.await_response(ctx, 
-            [str(v) for v in range(1, len(choices) + 1)] + ["c"])
-
-        # Display decision
-        if response:
-            selected_decision = choices[int(response) - 1]
-            await DecisionDisplayEmbed(selected_decision, ctx.channel, ctx).send_message()
-            return selected_decision
-
     @commands.command(name='modifyactions')
-    async def modify_actions(self, ctx, decision = None):
+    async def modify_actions(self,
+                             ctx: Context,
+                             decision: Decision = None):
+        """
+        Receive a list of decisions and modify properties of one of them.
+        params:
+            ctx: The Discord context in which the command has been executed within.
+            decision: The decision to modify actions for. If not provided, the user will be prompted to select one.
+        """
         selected_decision = decision
         if not decision:
             selected_decision = await self.choose_decision(ctx, DecisionState.PREPARATION)
@@ -133,7 +117,20 @@ class Decisions(commands.Cog):
                 selected_action = choices[int(response) - 1]
                 await self.update_action(ctx, selected_decision, selected_action)
 
-    async def create_action(self, ctx, decision):
+    @commands.command(name='createaction')
+    async def create_action(self,
+                             ctx: Context,
+                             decision: Decision = None):
+        """
+        Create an action for a decision.
+        params:
+            ctx: The Discord context in which the command has been executed within.
+            decision: The decision to modify actions for. If not provided, the user will be prompted to select one.
+        """
+        selected_decision = decision
+        if not decision:
+            selected_decision = await self.choose_decision(ctx, DecisionState.PREPARATION)
+        
         message_str = 'Describe the action. (c to cancel)\n'
         await GenericDisplayEmbed('Create Action', message_str, ctx.channel).send_message()
         action_description = await self.await_response(ctx)
@@ -142,10 +139,40 @@ class Decisions(commands.Cog):
         await GenericDisplayEmbed('Create Action', message_str, ctx.channel).send_message()
         action_glyph = await self.await_response(ctx)
 
-        decision.actions.append(Action(glyph=action_glyph, description=action_description, previous_decision=decision))
-        await self.update_decision(decision)
+        selected_decision.actions.append(Action(glyph=action_glyph, description=action_description, previous_decision=selected_decision))
+        await self.update_decision(selected_decision)
 
-    async def update_action(self, ctx, decision, action):
+    @commands.command(name='updateaction')
+    async def update_action(self,
+                             ctx: Context,
+                             decision: Decision = None,
+                             action: Action = None):
+        """
+        Update an action for a decision.
+        params:
+            ctx: The Discord context in which the command has been executed within.
+            decision: The decision to modify actions for. If not provided, the user will be prompted to select one.
+            action: The action to update. If not provided, the user will be prompted to select one.
+        """
+        selected_decision = decision
+        if not decision:
+            selected_decision = await self.choose_decision(ctx, DecisionState.PREPARATION)
+        
+        # TODO: fix this
+        selected_action = action
+        if not action:
+            message_str = 'Which action do you want to update? (c to cancel)\n'
+            choices = []
+            for index, action in enumerate(selected_decision.actions):
+                choices.append(action)
+                message_str += f'[**{index + 1}**] {action.glyph} = {action.description} \n'
+            await GenericDisplayEmbed('Update Action', message_str, ctx.channel).send_message()
+
+            response = await self.await_response(ctx, [str(v) for v in range(1, len(selected_decision.actions) + 1)] + ['c'])
+            if response:
+                selected_action = choices[int(response) - 1]
+            else:
+                return
         message_str = 'Describe the action. (c to cancel)\n'
         await GenericDisplayEmbed('Update Action', message_str, ctx.channel).send_message()
         action_description = await self.await_response(ctx)
@@ -156,44 +183,16 @@ class Decisions(commands.Cog):
 
         # Find action and update
         action_index = -1
-        for index, act in enumerate(decision.actions):
-            if act.id_ == action.id_:
+        for index, act in enumerate(selected_decision.actions):
+            if act.id_ == selected_action.id_:
                 action_index = index
         if action_index != -1:
-            decision.actions[action_index].description = action_description
-            decision.actions[action_index].glyph = action_glyph
-            decision.actions[action_index].previous_decision = decision
-            await self.update_decision(decision)
+            selected_decision.actions[action_index].description = action_description
+            selected_decision.actions[action_index].glyph = action_glyph
+            selected_decision.actions[action_index].previous_decision = selected_decision
+            await self.update_decision(selected_decision)
         else:
             print('could not find that action to update.')
-
-    async def update_decision(self, decision):
-        self.state_management.update_decision(decision)
-
-    # Bot awaits for a response from the user.
-    async def await_response(self, ctx, valid_options = [], timeout = 30):
-        # Ensure selection is within the bounds of choice
-        def check(msg):
-            return msg.channel == ctx.channel \
-                and msg.author == ctx.author \
-                and msg.content.lower() in valid_options
-
-        response = ''
-        try:
-            if valid_options:
-                response = await self.bot.wait_for("message", timeout=timeout, check=check)
-            else:
-                response = await self.bot.wait_for("message", timeout=timeout)
-        except asyncio.TimeoutError:
-            response = None
-
-        # Display decision
-        if response:
-            if response.content == 'c':
-                response = None
-        if response is None:
-            await ctx.send("Selection timed out or was canceled.")
-        return response.content
 
     @commands.command(name='viewdecisions')
     async def view_decisions(self, ctx, decision_state: str = DecisionState.PREPARATION):
@@ -311,32 +310,37 @@ class Decisions(commands.Cog):
         selected_decision.message_id = sent_message.id
         await self.update_decision(selected_decision)
 
-    def find_decisions(self, decision_id = None, decision_state = None):
-        """
-        Find a Decision in state management based on filter criteria.
-        params:
-            id: The unique identifier of a Decision to filter the results with.
-            decision_state: The state of Decisions to filter the results with.
-        """
-        state = self.state_management.get_state()
-        decisions = []
+    # Helper Functions
+    async def update_decision(self, decision):
+        self.state_management.update_decision(decision)
 
-        if decision_id:
-            for decision in state:
-                if decision.id == decision_id:
-                    return decision
-                # TODO: Handle scenario where none are found of this id
+    # Bot awaits for a response from the user.
+    async def await_response(self, ctx, valid_options = [], timeout = 30):
+        # Ensure selection is within the bounds of choice
+        def check(msg):
+            return msg.channel == ctx.channel \
+                and msg.author == ctx.author \
+                and msg.content.lower() in valid_options
 
-        elif decision_state:
-            for decision in state['decisions']:
-                if decision.state == decision_state:
-                    decisions.append(decision)
-                # TODO: Handle scenario where none are found of this state
-            return decisions
+        response = ''
+        try:
+            if valid_options:
+                response = await self.bot.wait_for("message", timeout=timeout, check=check)
+            else:
+                response = await self.bot.wait_for("message", timeout=timeout)
+        except asyncio.TimeoutError:
+            response = None
 
-        else:
-            return state
-        
+        # Display decision
+        if response:
+            if response.content == 'c':
+                response = None
+            else:
+                return response.content
+        if response is None:
+            await ctx.send("Selection timed out or was canceled.")
+        return None
+      
     async def check_time(self):
         """ Checks the time for each published decision and checks if the resolve time is up """
         decisions = self.find_decisions(decision_state=DecisionState.PUBLISHED)
@@ -383,6 +387,63 @@ class Decisions(commands.Cog):
                 await GenericDisplayEmbed('Decision Resolved', f'An action has been chosen {action.description}, {action.glyph}', publish_channel).send_message()
                 await GenericDisplayEmbed('Decision Resolved', f'An action has been chosen {action.description}, {action.glyph}', dm_channel).send_message()
 
+    async def choose_decision(self,
+                              ctx: Context,
+                              state: DecisionState):
+        """
+        choose_decision: Display a list of decisions and allow the user to select one.
+        params:
+            ctx: The Discord context in which the command has been executed within.
+            state: The state of the decision to choose from.
+        """
+        decisions = self.find_decisions(decision_state=state)
+        choices = []
+        message_str = 'Found Decision(s), which one do you want to select. (c to cancel):'
+
+        # If multiple decisions are found, list each and have user select one
+        for decision in decisions:
+            choices.append(decision)
+            message_str += f'\n [**{len(choices)}**] {str(decision.body)[0:20]}'
+
+        # Send choices, await a legitimate response
+        await GenericDisplayEmbed('Select Decision', message_str, ctx.channel).send_message()
+
+        response = await self.await_response(ctx, 
+            [str(v) for v in range(1, len(choices) + 1)] + ["c"])
+
+        # Display decision
+        if response:
+            selected_decision = choices[int(response) - 1]
+            await DecisionDisplayEmbed(selected_decision, ctx.channel, ctx).send_message()
+            return selected_decision
+        return None
+
+    def find_decisions(self, decision_id = None, decision_state = None):
+        """
+        Find a Decision in state management based on filter criteria.
+        params:
+            id: The unique identifier of a Decision to filter the results with.
+            decision_state: The state of Decisions to filter the results with.
+        """
+        state = self.state_management.get_state()
+        decisions = []
+
+        if decision_id:
+            for decision in state:
+                if decision.id == decision_id:
+                    return decision
+                # TODO: Handle scenario where none are found of this id
+
+        elif decision_state:
+            for decision in state['decisions']:
+                if decision.state == decision_state:
+                    decisions.append(decision)
+                # TODO: Handle scenario where none are found of this state
+            return decisions
+
+        else:
+            return state
+  
 def round_time(date=None, date_delta=datetime.timedelta(minutes=1), to='average'):
     """
     Round a datetime object to a multiple of a timedelta
