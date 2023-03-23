@@ -28,7 +28,7 @@ class Decision:
             self,
             title,
             body,
-            actions,
+            actions = [],
             id_ = str(shortuuid.ShortUUID().random(length=22))
         ):
         self.id_ = id_
@@ -37,9 +37,12 @@ class Decision:
         self.title = title
         self.body = body
         self.actions = actions
+        self.voted_action = None
         self.state = DecisionState.PREPARATION
-        self.publish_time
-        self.resolve_time
+        self.publish_time = None
+        self.resolve_time = None
+        self.guild_id = None 
+        self.message_id = None
 
     def get_next_decisions(self):
         """

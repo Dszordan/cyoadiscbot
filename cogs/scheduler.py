@@ -10,8 +10,8 @@ class Scheduler(commands.Cog):
 
     @tasks.loop(seconds=5.0)
     async def printer(self):
-        print(self.index)
-        self.index += 1
+        # call the decisions cog check_time method
+        await self.bot.get_cog('Decisions').check_time()
 
     @commands.Cog.listener()
     async def on_ready(self):

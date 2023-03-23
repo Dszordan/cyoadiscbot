@@ -26,7 +26,7 @@ class Decisions(commands.Cog):
 
     @commands.command(name='preparedecision')
     async def prepare_decision(
-        self, ctx, body: str, *actions: typing.Union[Emoji, PartialEmoji, str]):
+        self, ctx, title: str, body: str):
         """
         Prepare a new decision and persist it to state management.
         params:
@@ -35,23 +35,23 @@ class Decisions(commands.Cog):
             actions: The emojis that make up the reactions to the decision,
                 In the form emoji|description emoji|description
         """
-        parsed_actions = []
+        # parsed_actions = []
 
-        # Parse actions
-        for action in actions:
-            print(action)
-            emoji = action.split('|')[0]
-            description = action.split('|')[1]
-            parsed_actions.append(Action(emoji, description))
+        # # Parse actions
+        # for action in actions:
+        #     print(action)
+        #     emoji = action.split('|')[0]
+        #     description = action.split('|')[1]
+        #     parsed_actions.append(Action(emoji, description))
 
         # create decision model
-        decision = Decision(body, parsed_actions)
+        decision = Decision(title, body)
         decisions = self.state_management.get_state()
         decisions['decisions'].append(decision)
         self.state_management.write_state(decisions)
 
         # Display decision
-        await DecisionDisplayEmbed(decision, ctx, ctx.channel).send_message()
+        await DecisionDisplayEmbed(decision, ctx.channel, ctx).send_message()
 
     @commands.command(name='modifydecision')
     async def modify_decision(self, ctx):
@@ -87,7 +87,7 @@ class Decisions(commands.Cog):
                         await self.update_decision(selected_decision)
                 case '3':
                     await self.modify_actions(ctx, selected_decision)
-            await DecisionDisplayEmbed(selected_decision, ctx, ctx.channel).send_message()
+            await DecisionDisplayEmbed(selected_decision, ctx.channel, ctx).send_message()
 
     async def choose_decision(self, ctx, state = DecisionState.PREPARATION):
         decisions = self.find_decisions(decision_state=state)
@@ -108,7 +108,7 @@ class Decisions(commands.Cog):
         # Display decision
         if response:
             selected_decision = choices[int(response) - 1]
-            await DecisionDisplayEmbed(selected_decision, ctx, ctx.channel).send_message()
+            await DecisionDisplayEmbed(selected_decision, ctx.channel, ctx).send_message()
             return selected_decision
 
     @commands.command(name='modifyactions')
@@ -304,9 +304,12 @@ class Decisions(commands.Cog):
         channel = next((x for x in ctx.guild.channels if x.name == publish_channel), None)
         selected_decision.publish_time = str(datetime.datetime.now())
         selected_decision.resolve_time = str(choices[int(response) - 1])
+        selected_decision.state = DecisionState.PUBLISHED
+        selected_decision.guild_id = ctx.guild.id
+        await ctx.send(f'The decision will publish to {channel} with a resolve time at {selected_decision.resolve_time}')
+        sent_message = await DecisionDisplayEmbed(selected_decision, channel, ctx).send_message()
+        selected_decision.message_id = sent_message.id
         await self.update_decision(selected_decision)
-        await ctx.send(f'The following decision will publish to {channel} at {selected_decision.resolve_time}')
-        await DecisionDisplayEmbed(selected_decision, ctx, ctx.channel).send_message()
 
     def find_decisions(self, decision_id = None, decision_state = None):
         """
@@ -316,7 +319,6 @@ class Decisions(commands.Cog):
             decision_state: The state of Decisions to filter the results with.
         """
         state = self.state_management.get_state()
-        print(state)
         decisions = []
 
         if decision_id:
@@ -336,14 +338,50 @@ class Decisions(commands.Cog):
             return state
         
     async def check_time(self):
-        decisions = self.find_decisions(decision_state=DecisionState.PREPARATION)
+        """ Checks the time for each published decision and checks if the resolve time is up """
+        decisions = self.find_decisions(decision_state=DecisionState.PUBLISHED)
         for decision in decisions:
             resolve_time = datetime.datetime.strptime(decision.resolve_time, "%Y-%m-%d %H:%M:%S")
-            if decision.resolve_time < datetime.datetime.now():
-                # publish
-                decision.state = DecisionState.PUBLISHED
+            if resolve_time < datetime.datetime.now():
+                print(f'Resolve time is up for {decision.id_}' )
+                # Count votes and choose the winner
+                # Inform  the publish channel of the winner
+                # Inform the DM channel of the winner and the next decision
+                # TODO: Implement this
+
+                guild = self.bot.get_guild(decision.guild_id)
+                publish_channel_name = self.state_management.get_admin_state()['channels']['publish']
+                dm_channel_name = self.state_management.get_admin_state()['channels']['dm']
+                publish_channel = next((x for x in guild.channels if x.name == publish_channel_name), None)
+                dm_channel = next((x for x in guild.channels if x.name == dm_channel_name), None)
+                print(f'Publish channel: {publish_channel.name}')
+
+                # Find the specific discord message object
+                message = await publish_channel.fetch_message(decision.message_id)
+                # Get the message reaction count from the message
+                reactions = message.reactions
+                # Tally the reactions and find the reaction with the most votes
+                top_reaction = None
+                for reaction in reactions:
+                    if not top_reaction:
+                        top_reaction = reaction
+                    elif reaction.count > top_reaction.count:
+                        top_reaction = reaction
+                
+                # TODO: Handle the case where there is a tie
+                # TODO: Handle the case where there is no reaction
+                # Find the action that corresponds to the reaction
+                action = next((x for x in decision.actions if x.glyph == top_reaction.emoji), None)
+                # set the found action as the voted action
+                decision.voted_action = action
+                
+                decision.state = DecisionState.RESOLVED
                 await self.update_decision(decision)
-                await DecisionDisplayEmbed(selected_decision, ctx, ctx.channel).send_message()
+                # Get the message reaction count from the message
+                
+                # TODO: finish this
+                await GenericDisplayEmbed('Decision Resolved', f'An action has been chosen {action.description}, {action.glyph}', publish_channel).send_message()
+                await GenericDisplayEmbed('Decision Resolved', f'An action has been chosen {action.description}, {action.glyph}', dm_channel).send_message()
 
 def round_time(date=None, date_delta=datetime.timedelta(minutes=1), to='average'):
     """

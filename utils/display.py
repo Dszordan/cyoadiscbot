@@ -8,7 +8,7 @@ class DecisionDisplayEmbed():
         Display Decisions to a specific channel using Discord Embeds
     """
 
-    def __init__(self, decision, ctx, channel):
+    def __init__(self, decision, channel, ctx = None):
         """
             Set up a DecisionDisplay using the context of the calling action
             params:
@@ -41,6 +41,8 @@ class DecisionDisplayEmbed():
         for action in self.decision.actions:
             print(action.glyph + ' ' + action.description)
             await decision_message.add_reaction(action.glyph)
+        
+        return decision_message
 
 class GenericDisplayEmbed():
     """

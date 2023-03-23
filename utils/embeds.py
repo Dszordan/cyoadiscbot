@@ -12,7 +12,7 @@ class CharacterEmbed(discord.Embed):
 
     def __init__(
             self,
-            ctx,
+            ctx = None,
             player = None,
             title = None,
             description = None,
