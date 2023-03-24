@@ -39,9 +39,9 @@ decisions:
     next_decision: null
     previous_decision: *id003
   - !!python/object:model.decision.Action
-    description: ''
-    glyph: null
-    id_: 3hY2HmrHX4Hk6V6jQiushj
+    description: Sleep
+    glyph: "\U0001F6CC"
+    id_: Th6YXHojF5pcaE8Z2V6AT3
     next_decision: null
     previous_decision: *id003
   body: You hear yourself gasp, unsure if it's what woke you or if it were just a

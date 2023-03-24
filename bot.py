@@ -10,10 +10,12 @@ from dotenv import load_dotenv
 
 handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
 
+from cogs.actions import Actions
 from cogs.admin import AdminTools
 from cogs.decisions import Decisions
 from cogs.error_handler import CommandErrorHandler
 from cogs.scheduler import Scheduler
+from cogs.user_interaction import UserInteraction
 from file_persistence import file_persistence
 
 load_dotenv()
@@ -44,8 +46,10 @@ async def rolldice_error(ctx, error):
     await ctx.send(f'Sorry, I couldn\'t roll dice for you. Error: {error}')
 
 async def main():
-    await bot.add_cog(AdminTools(bot, state_management))
+    await bot.add_cog(UserInteraction(bot))
     await bot.add_cog(Decisions(bot, state_management))
+    await bot.add_cog(Actions(bot, state_management))
+    await bot.add_cog(AdminTools(bot, state_management))
     await bot.add_cog(CommandErrorHandler(bot))
     await bot.add_cog(Scheduler(bot))
 
