@@ -8,8 +8,6 @@ import discord
 from discord.ext import commands
 from dotenv import load_dotenv
 
-handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
-
 from cogs.actions import Actions
 from cogs.admin import AdminTools
 from cogs.decisions import Decisions
@@ -17,6 +15,8 @@ from cogs.error_handler import CommandErrorHandler
 from cogs.scheduler import Scheduler
 from cogs.user_interaction import UserInteraction
 from file_persistence import file_persistence
+
+handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
 
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')

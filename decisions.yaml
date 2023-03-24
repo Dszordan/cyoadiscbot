@@ -13,7 +13,7 @@ decisions:
   message_id: 1088282152132694058
   publish_time: '2023-03-22 22:04:43.942693'
   resolve_time: '2023-03-22 22:03:00'
-  state: !!python/object/apply:model.decision.DecisionState
+  state: &id004 !!python/object/apply:model.decision.DecisionState
   - 3
   timeout: null
   title: Cool Title
@@ -26,7 +26,7 @@ decisions:
     id_: EveKkJNjWacSJFwNUYU3eh
     next_decision: null
     previous_decision: *id003
-  - !!python/object:model.decision.Action
+  - &id005 !!python/object:model.decision.Action
     description: Read through the sheaf of papers.
     glyph: "\U0001F9FB"
     id_: Me6rm3QZ8TnyukHTSidYP2
@@ -53,12 +53,11 @@ decisions:
     blocking the view. The breeze behind is just enough to steal through the slats
     and a sheaf of papers rustle in response. Your feet hit the cool tile floor. What
     do you always do first thing in the morning?
-  guild_id: null
+  guild_id: 760201870999683154
   id_: u6j6njjzLNLKAmiM3RfCRb
-  message_id: null
-  publish_time: null
-  resolve_time: null
-  state: !!python/object/apply:model.decision.DecisionState
-  - 1
+  message_id: 1088648647702499339
+  publish_time: '2023-03-23 22:21:03.404502'
+  resolve_time: 2023-03-23 22:23:01.182247
+  state: *id004
   title: Morning
-  voted_action: null
+  voted_action: *id005

@@ -16,6 +16,31 @@ class Actions(commands.Cog):
         self.decisions = self.bot.get_cog('Decisions')
         self.user_interaction = self.bot.get_cog('UserInteraction')
 
+    @commands.command(name='createaction')
+    async def create_action(self,
+                             ctx: Context,
+                             decision: Decision = None):
+        """
+        Create an action for a decision.
+        params:
+            ctx: The Discord context in which the command has been executed within.
+            decision: The decision to modify actions for. If not provided, the user will be prompted to select one.
+        """
+        selected_decision = decision
+        if not decision:
+            selected_decision = await self.decisions.choose_decision(ctx, DecisionState.PREPARATION)
+        
+        message_str = 'Describe the action. (c to cancel)\n'
+        await GenericDisplayEmbed('Create Action', message_str, ctx.channel).send_message()
+        action_description = await self.user_interaction.await_response(ctx)
+        
+        message_str = 'Give the action a glyph/emoji (c to cancel)\n'
+        await GenericDisplayEmbed('Create Action', message_str, ctx.channel).send_message()
+        action_glyph = await self.user_interaction.await_response(ctx)
+
+        selected_decision.actions.append(Action(glyph=action_glyph, description=action_description, previous_decision=selected_decision))
+        await self.decisions.update_decision(selected_decision)
+
     @commands.command(name='modifyactions')
     async def modify_actions(self,
                              ctx: Context,
@@ -45,31 +70,6 @@ class Actions(commands.Cog):
             else:
                 selected_action = choices[int(response) - 1]
                 await self.update_action(ctx, selected_decision, selected_action)
-
-    @commands.command(name='createaction')
-    async def create_action(self,
-                             ctx: Context,
-                             decision: Decision = None):
-        """
-        Create an action for a decision.
-        params:
-            ctx: The Discord context in which the command has been executed within.
-            decision: The decision to modify actions for. If not provided, the user will be prompted to select one.
-        """
-        selected_decision = decision
-        if not decision:
-            selected_decision = await self.decisions.choose_decision(ctx, DecisionState.PREPARATION)
-        
-        message_str = 'Describe the action. (c to cancel)\n'
-        await GenericDisplayEmbed('Create Action', message_str, ctx.channel).send_message()
-        action_description = await self.user_interaction.await_response(ctx)
-        
-        message_str = 'Give the action a glyph/emoji (c to cancel)\n'
-        await GenericDisplayEmbed('Create Action', message_str, ctx.channel).send_message()
-        action_glyph = await self.user_interaction.await_response(ctx)
-
-        selected_decision.actions.append(Action(glyph=action_glyph, description=action_description, previous_decision=selected_decision))
-        await self.decisions.update_decision(selected_decision)
 
     @commands.command(name='updateaction')
     async def update_action(self,
