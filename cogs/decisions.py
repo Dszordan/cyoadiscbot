@@ -3,6 +3,7 @@
 """
 import asyncio
 import datetime
+import random
 
 from discord.ext import commands
 from discord.ext.commands import Context
@@ -58,9 +59,8 @@ class Decisions(commands.Cog):
         """
         selected_decision = await self.choose_decision(ctx, state=DecisionState.PREPARATION)
 
-        # TODO: Add a way to cancel this process
         # TODO: Add a way to delete a decision
-        # TODO: Add a way to change the resolve time
+        # TODO: Add a way to change the resolve time. Might not be able to do this, since the resolve time is set at publish time..
         message_str = "Which property do you wish to update? (c to cancel)\n"
         message_str += "[**1**] Title\n"
         message_str += "[**2**] Body\n"
@@ -251,10 +251,17 @@ class Decisions(commands.Cog):
                 await self.update_decision(decision)
                 # Get the message reaction count from the message
                 
-                # TODO: Randomly generate from a list of funny messages. "The people have spoken" "Fate was drawn." "The gods have spoken." "The decision has been made." "The future crystalizes."
-                # TODO: Make the message embed look nicer   
-                await GenericDisplayEmbed('Decision Resolved', f'An action has been chosen {action.description}, {action.glyph}', publish_channel).send_message()
-                await GenericDisplayEmbed('Decision Resolved', f'An action has been chosen {action.description}, {action.glyph}', dm_channel).send_message()
+
+                # create list of messages
+                list_of_messages = ["The people have spoken.",
+                                    "A fate is drawn.",
+                                    "The gods deign.",
+                                    "A decision has been made.",
+                                    "The future crystalizes."]
+                # TODO: Make the message embed look nicer
+                message = random.choice(list_of_messages)
+                await GenericDisplayEmbed(message, f'An action has been chosen {action.description}, {action.glyph}', publish_channel).send_message()
+                await GenericDisplayEmbed(message, f'An action has been chosen {action.description}, {action.glyph}', dm_channel).send_message()
 
     async def choose_decision(self,
                               ctx: Context,
