@@ -1,6 +1,7 @@
 """
     Send messages to channels using embeds a little easier.
 """
+import datetime
 from utils.embeds import CharacterEmbed, DefaultEmbed
 
 class DecisionDisplayEmbed():
@@ -24,6 +25,9 @@ class DecisionDisplayEmbed():
         rich_body+= '**Actions:**\n'
         for action in decision.actions:
             rich_body+=action.glyph + ' = ' + action.description + '\n'
+        if decision.resolve_time:
+            resolve_time_pretty = datetime.datetime.strftime(decision.resolve_time, "%d %b at %-I:%M %p")
+            rich_body+= f'\nVoting closes at {resolve_time_pretty} \n'
 
         # create embed
         self.embed = CharacterEmbed(ctx)

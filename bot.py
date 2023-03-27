@@ -33,17 +33,17 @@ async def on_ready():
     guild = discord.utils.get(bot.guilds, name=GUILD)
     print(f'{bot.user} has connected to {guild}!')
 
-@bot.command(name='rolldice', help='Roll a number of dice')
-async def rolldice(ctx, number_of_dice: int, number_of_sides: int):
-    dice = [
-        str(random.choice(range(1, number_of_sides + 1)))
-        for _ in range(number_of_dice)
-    ]
-    await ctx.send(', '.join(dice))
-
-@rolldice.error
-async def rolldice_error(ctx, error):
-    await ctx.send(f'Sorry, I couldn\'t roll dice for you. Error: {error}')
+@bot.check
+async def dm_channel_commands(ctx):
+    # get admin state
+    admin_state = state_management.get_admin_state()
+    # if ctx channel name is not admin channel, disallow command
+    if admin_state:
+        if admin_state['channels']['dm']:
+            if ctx.channel.name != admin_state['channels']['dm']:
+                await ctx.send('This command is not allowed in this channel.')
+                return False
+    return True
 
 async def main():
     await bot.add_cog(UserInteraction(bot))

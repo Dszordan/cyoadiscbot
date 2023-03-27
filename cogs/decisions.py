@@ -25,6 +25,7 @@ class Decisions(commands.Cog):
                  state_management: file_persistence):
         self.bot = bot
         self.state_management = state_management
+        self.actions = self.bot.get_cog('Actions')
         self.user_interaction = self.bot.get_cog('UserInteraction')
 
     # Bot Commands
@@ -85,7 +86,7 @@ class Decisions(commands.Cog):
                         selected_decision.body = response
                         await self.update_decision(selected_decision)
                 case '3':
-                    await self.modify_actions(ctx, selected_decision)
+                    await self.actions.modify_actions(ctx, selected_decision)
             await DecisionDisplayEmbed(selected_decision, ctx.channel, ctx).send_message()
 
     @commands.command(name='viewdecisions')
@@ -260,8 +261,8 @@ class Decisions(commands.Cog):
                                     "The future crystalizes."]
                 # TODO: Make the message embed look nicer
                 message = random.choice(list_of_messages)
-                await GenericDisplayEmbed(message, f'An action has been chosen {action.description}, {action.glyph}', publish_channel).send_message()
-                await GenericDisplayEmbed(message, f'An action has been chosen {action.description}, {action.glyph}', dm_channel).send_message()
+                await GenericDisplayEmbed(message, f'An action has been chosen \n{action.glyph}: {action.description}', publish_channel).send_message()
+                await GenericDisplayEmbed(message, f'An action has been chosen \n{action.glyph}: {action.description}', dm_channel).send_message()
 
     async def choose_decision(self,
                               ctx: Context,
@@ -279,7 +280,7 @@ class Decisions(commands.Cog):
         # If multiple decisions are found, list each and have user select one
         for decision in decisions:
             choices.append(decision)
-            message_str += f'\n [**{len(choices)}**] {str(decision.body)[0:20]}'
+            message_str += f'\n [**{len(choices)}**] {str(decision.title)[0:20]}'
 
         # Send choices, await a legitimate response
         await GenericDisplayEmbed('Select Decision', message_str, ctx.channel).send_message()
@@ -306,19 +307,19 @@ class Decisions(commands.Cog):
         state = self.state_management.get_state()
         decisions = []
 
+        # If an id is provided, return the decision with that id
         if decision_id:
             for decision in state:
                 if decision.id == decision_id:
                     return decision
                 # TODO: Handle scenario where none are found of this id
-
+        # If no id is provided, return all decisions with the provided state
         elif decision_state:
             for decision in state['decisions']:
                 if decision.state == decision_state:
                     decisions.append(decision)
                 # TODO: Handle scenario where none are found of this state
             return decisions
-
         else:
             return state
   

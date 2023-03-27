@@ -20,13 +20,13 @@ decisions:
   voted_action: *id002
 - &id003 !!python/object:model.decision.Decision
   actions:
-  - !!python/object:model.decision.Action
+  - &id005 !!python/object:model.decision.Action
     description: Approach the window, open the shutters.
     glyph: "\U0001FA9F"
     id_: EveKkJNjWacSJFwNUYU3eh
     next_decision: null
     previous_decision: *id003
-  - &id005 !!python/object:model.decision.Action
+  - !!python/object:model.decision.Action
     description: Read through the sheaf of papers.
     glyph: "\U0001F9FB"
     id_: Me6rm3QZ8TnyukHTSidYP2
@@ -55,9 +55,42 @@ decisions:
     do you always do first thing in the morning?
   guild_id: 760201870999683154
   id_: u6j6njjzLNLKAmiM3RfCRb
-  message_id: 1088648647702499339
-  publish_time: '2023-03-23 22:21:03.404502'
-  resolve_time: 2023-03-23 22:23:01.182247
+  message_id: 1089687661142351892
+  publish_time: '2023-03-26 19:09:43.544834'
+  resolve_time: 2023-03-26 19:09:39.608113
   state: *id004
   title: Morning
   voted_action: *id005
+- &id006 !!python/object:model.decision.Decision
+  actions:
+  - !!python/object:model.decision.Action
+    description: Approach the window, open the shutters.
+    glyph: "\U0001FA9F"
+    id_: 342zzivtFoQnWyGsNZWVo9
+    next_decision: null
+    previous_decision: *id006
+  - !!python/object:model.decision.Action
+    description: Read through the sheaf of papers.
+    glyph: "\U0001F4DC"
+    id_: 6rAxbWRrYweAa6scMcgaEn
+    next_decision: null
+    previous_decision: *id006
+  body: "You hear yourself gasp, unsure if it's what woke you or if it were just a\
+    \ symptom of the cause. You awake as you had plenty of mornings prior - sweating,\
+    \ short of breath, hands shielding face. It takes a moment to calm yourself, staring\
+    \ at the high ceiling trying to erase the last few dredges of that dream from\
+    \ your memory. Usually you find it easier to think of the day ahead to erase the\
+    \ past and it is just enough to rouse you to your feet. You look about the small,\
+    \ stately room. The windows wooden shutters blocking the view. The breeze beyond\
+    \ just enough to steal through the slats and a sheaf of papers rustle in response.\
+    \ Your feet hit the cool tile floor. \n\n**What do you always do first thing in\
+    \ the morning?**"
+  guild_id: 578770352335880212
+  id_: CtxjUSKFuJHJzBirfopPP4
+  message_id: 1089711991381311539
+  publish_time: '2023-03-26 20:46:24.340212'
+  resolve_time: 2023-03-26 21:06:19.802488
+  state: !!python/object/apply:model.decision.DecisionState
+  - 1
+  title: Morning
+  voted_action: null
