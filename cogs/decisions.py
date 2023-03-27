@@ -3,13 +3,13 @@
 """
 import asyncio
 import datetime
-import typing
+import random
 
-from discord import Emoji, PartialEmoji
 from discord.ext import commands
+from discord.ext.commands import Context
 
 from file_persistence import file_persistence
-from model.decision import Decision, DecisionState, Action
+from model.decision import Decision, DecisionState
 from utils.display import DecisionDisplayEmbed, GenericDisplayEmbed
 
 class Decisions(commands.Cog):
@@ -20,39 +20,79 @@ class Decisions(commands.Cog):
         state_management: The state management object responsible for persisting
             Decisions' state.
     """
-    def __init__(self, bot, state_management: file_persistence):
+    def __init__(self,
+                 bot: commands.Bot,
+                 state_management: file_persistence):
         self.bot = bot
         self.state_management = state_management
+        self.actions = self.bot.get_cog('Actions')
+        self.user_interaction = self.bot.get_cog('UserInteraction')
 
+    # Bot Commands
     @commands.command(name='preparedecision')
-    async def prepare_decision(
-        self, ctx, body: str, *actions: typing.Union[Emoji, PartialEmoji, str]):
+    async def prepare_decision(self,
+                               ctx: Context,
+                               title: str,
+                               body: str):
         """
         Prepare a new decision and persist it to state management.
         params:
             ctx: The context in which the command has been executed within.
-            body: The content to put in the decision
-            actions: The emojis that make up the reactions to the decision,
-                In the form emoji|description emoji|description
+            title: The title of the decision.
+            body: The content of the decision.
         """
-        parsed_actions = []
-
-        # Parse actions
-        for action in actions:
-            print(action)
-            emoji = action.split('|')[0]
-            description = action.split('|')[1]
-            parsed_actions.append(Action(emoji, description))
-
         # create decision model
-        decision = Decision(body, parsed_actions)
-        self.state_management.write_state([decision])
+        decision = Decision(title, body)
+        decisions = self.state_management.get_state()
+        decisions['decisions'].append(decision)
+        self.state_management.write_state(decisions)
 
         # Display decision
-        await DecisionDisplayEmbed(decision, ctx, ctx.channel).send_message()
+        await DecisionDisplayEmbed(decision, ctx.channel, ctx).send_message()
+
+    @commands.command(name='modifydecision')
+    async def modify_decision(self,
+                              ctx: Context):
+        """
+        Receive a list of decisions and modify properties of one of them..
+        params:
+            ctx: The Discord context in which the command has been executed within.
+        """
+        selected_decision = await self.choose_decision(ctx, state=DecisionState.PREPARATION)
+
+        # TODO: Add a way to delete a decision
+        # TODO: Add a way to change the resolve time. Might not be able to do this, since the resolve time is set at publish time..
+        message_str = "Which property do you wish to update? (c to cancel)\n"
+        message_str += "[**1**] Title\n"
+        message_str += "[**2**] Body\n"
+        message_str += "[**3**] Actions\n"
+        await GenericDisplayEmbed('Decision Property Update', message_str, ctx.channel).send_message()
+
+        response = await self.user_interaction.await_response(ctx, ['1','2','3'])
+
+        # Display decision
+        if response:
+            match response:
+                case '1':
+                    await GenericDisplayEmbed('Decision Title Update', 'What is the new title?', ctx.channel).send_message()
+                    response = await self.user_interaction.await_response(ctx)
+                    if response:
+                        selected_decision.title = response
+                        await self.update_decision(selected_decision)
+                case '2':
+                    await GenericDisplayEmbed('Decision Body Update', 'What is the new body?', ctx.channel).send_message()
+                    response = await self.user_interaction.await_response(ctx)
+                    if response:
+                        selected_decision.body = response
+                        await self.update_decision(selected_decision)
+                case '3':
+                    await self.actions.modify_actions(ctx, selected_decision)
+            await DecisionDisplayEmbed(selected_decision, ctx.channel, ctx).send_message()
 
     @commands.command(name='viewdecisions')
-    async def view_decisions(self, ctx, decision_state: str = DecisionState.PREPARATION):
+    async def view_decisions(self,
+                             ctx: Context,
+                             decision_state: DecisionState = DecisionState.PREPARATION):
         """
         View stored decisions filtering on its state.
         params:
@@ -66,7 +106,7 @@ class Decisions(commands.Cog):
         # If multiple decisions are found, list each and have user select one
         for decision in decisions:
             choices.append(decision)
-            message_str += f'\n [**{len(choices)}**] {str(decision.body)[0:20]}'
+            message_str += f'\n [**{len(choices)}**] {str(decision.title)[0:20]}'
 
         # Ensure selection is within the bounds of choice
         def check(msg):
@@ -95,75 +135,170 @@ class Decisions(commands.Cog):
             await ctx.send("Selection timed out or was canceled.")
 
     @commands.command(name='publishdecision')
-    async def publish_decision(self, ctx, timeout: int = 120):
+    async def publish_decision(self,
+                               ctx: Context,
+                               timeout: int = 120):
         """
-        TODO: Implement timeout
-        Change a Decision to the PUBLISHED state and deliver the Decision to the publish channel.
-        params:
-            ctx: The Discord context in which the command has been executed within.
-            timeout: The amount of time that the Decision can be voted upon.
+        Changes a Decision to the PUBLISHED state and delivers the Decision to the publish channel.
+        :param ctx: The Discord context in which the command has been executed within.
+        :param timeout: The amount of time that the Decision can be voted upon.
+        :return: None
         """
+        # Find all Decisions in the PREPARATION state
         decisions = self.find_decisions(decision_state=DecisionState.PREPARATION)
         choices = []
-        message_str = 'Found decision(s), which one do you want to publish:'
-        publish_channel = 'public-channel'
+        admin_state = self.state_management.get_admin_state()
+        publish_channel = admin_state['channels']['publish']
+
+        # Display choices
+        message_str = "Found decision(s), which one do you want to publish:\n"
+        for i, decision in enumerate(decisions):
+            choices.append(decision)
+            message_str += f"[**{i+1}**] {str(decision.title)[0:20]}\n"
+        message_str += "Type a number between 1 and {} to select a decision, or type 'c' to cancel.".format(len(choices))
+        await GenericDisplayEmbed('Multiple Decisions Found', message_str, ctx.channel).send_message()
+
+        response = await self.user_interaction.await_response(ctx, [str(i) for i in range(1, len(choices) + 1)] + ["c"])
+
+        # Publish selected decision
+        if not response:
+            return
+        
+        selected_decision = choices[int(response) - 1]
+        await DecisionDisplayEmbed(selected_decision, ctx, ctx.channel).send_message()
+
+        # Confirm publication
+        message = f"Do you wish to publish the above Decision to **{publish_channel}**?\n" + \
+            f"[**y**] = Publish this decision to **{publish_channel}**\n" + \
+            f"[**n**] = Continue editing the Decision"
+        await GenericDisplayEmbed('Confirm Publication', message, ctx.channel).send_message()
+        response = await self.user_interaction.await_response(ctx, ['y','n','c'])
+        
+        if response.lower() == 'n':
+            await ctx.send('Canceled operation.')
+        if not response or response.lower() == 'n':
+            return
+
+        # Let the user choose a number of minutes from now to resolve the decision
+        message_str = 'How many minutes from now do you want to resolve the decision at?'
+        await GenericDisplayEmbed('Choose Resolve Time', message_str, ctx.channel).send_message()
+        response = await self.user_interaction.await_response(ctx)
+        print(response)
+        resolve_time = datetime.datetime.now() + datetime.timedelta(minutes=int(response))
+
+        resolve_time_pretty = datetime.datetime.strftime(resolve_time, "%d %b at %-I:%M %p")
+        message_str = f'The decision will resolve at the following time: **{resolve_time_pretty}**. Is this correct? (y/n)'
+        await GenericDisplayEmbed('Resolve Time', message_str, ctx.channel).send_message()
+        response = await self.user_interaction.await_response(ctx, ['y','n','c'])
+
+        if response.lower() == 'n':
+            await ctx.send('Canceled operation.')
+        if not response or response.lower() == 'n':
+            return
+
+        # Find the 'public-channel' and display the decision
+        channel = next((x for x in ctx.guild.channels if x.name == publish_channel), None)
+        selected_decision.publish_time = str(datetime.datetime.now())
+        selected_decision.resolve_time = resolve_time
+        selected_decision.state = DecisionState.PUBLISHED
+        selected_decision.guild_id = ctx.guild.id
+        await ctx.send(f'The decision will publish to {channel} with a resolve time at {selected_decision.resolve_time}')
+        sent_message = await DecisionDisplayEmbed(selected_decision, channel, ctx).send_message()
+        selected_decision.message_id = sent_message.id
+        await self.update_decision(selected_decision)
+
+    # Helper Functions
+    async def update_decision(self,
+                              decision: Decision):
+        self.state_management.update_decision(decision)
+      
+    async def check_time(self):
+        """ Checks the time for each published decision and checks if the resolve time is up """
+        decisions = self.find_decisions(decision_state=DecisionState.PUBLISHED)
+        for decision in decisions:
+            if decision.resolve_time < datetime.datetime.now():
+                print(f'Resolve time is up for {decision.id_}' )
+                # Count votes and choose the winner
+                # Inform  the publish channel of the winner
+                # Inform the DM channel of the winner and the next decision
+                # TODO: Implement this
+
+                guild = self.bot.get_guild(decision.guild_id)
+                publish_channel_name = self.state_management.get_admin_state()['channels']['publish']
+                dm_channel_name = self.state_management.get_admin_state()['channels']['dm']
+                publish_channel = next((x for x in guild.channels if x.name == publish_channel_name), None)
+                dm_channel = next((x for x in guild.channels if x.name == dm_channel_name), None)
+                print(f'Publish channel: {publish_channel.name}')
+
+                # Find the specific discord message object
+                message = await publish_channel.fetch_message(decision.message_id)
+                # Get the message reaction count from the message
+                reactions = message.reactions
+                # Tally the reactions and find the reaction with the most votes
+                top_reaction = None
+                for reaction in reactions:
+                    if not top_reaction:
+                        top_reaction = reaction
+                    elif reaction.count > top_reaction.count:
+                        top_reaction = reaction
+                
+                # TODO: Handle the case where there is a tie
+                # TODO: Handle the case where there is no reaction
+                # Find the action that corresponds to the reaction
+                action = next((x for x in decision.actions if x.glyph == top_reaction.emoji), None)
+                # set the found action as the voted action
+                decision.voted_action = action
+                
+                decision.state = DecisionState.RESOLVED
+                await self.update_decision(decision)
+                # Get the message reaction count from the message
+                
+
+                # create list of messages
+                list_of_messages = ["The people have spoken.",
+                                    "A fate is drawn.",
+                                    "The gods deign.",
+                                    "A decision has been made.",
+                                    "The future crystalizes."]
+                # TODO: Make the message embed look nicer
+                message = random.choice(list_of_messages)
+                await GenericDisplayEmbed(message, f'An action has been chosen \n{action.glyph}: {action.description}', publish_channel).send_message()
+                await GenericDisplayEmbed(message, f'An action has been chosen \n{action.glyph}: {action.description}', dm_channel).send_message()
+
+    async def choose_decision(self,
+                              ctx: Context,
+                              state: DecisionState):
+        """
+        choose_decision: Display a list of decisions and allow the user to select one.
+        params:
+            ctx: The Discord context in which the command has been executed within.
+            state: The state of the decision to choose from.
+        """
+        decisions = self.find_decisions(decision_state=state)
+        choices = []
+        message_str = 'Found Decision(s), which one do you want to select. (c to cancel):'
 
         # If multiple decisions are found, list each and have user select one
         for decision in decisions:
             choices.append(decision)
-            message_str += f'\n [**{len(choices)}**] {str(decision.body)[0:20]}'
-
-        # Ensure selection is within the bounds of choice
-        def check(msg):
-            valid = [str(v) for v in range(1, len(choices) + 1)] + ["c"]
-            return msg.channel == ctx.channel \
-                and msg.author == ctx.author \
-                and msg.content.lower() in valid
+            message_str += f'\n [**{len(choices)}**] {str(decision.title)[0:20]}'
 
         # Send choices, await a legitimate response
-        await GenericDisplayEmbed('Multiple Decisions Found',
-                                    message_str, ctx.channel).send_message()
+        await GenericDisplayEmbed('Select Decision', message_str, ctx.channel).send_message()
 
-        response = ''
-        try:
-            response = await self.bot.wait_for("message", timeout=30, check=check)
-        except asyncio.TimeoutError:
-            response = None
+        response = await self.user_interaction.await_response(ctx, 
+            [str(v) for v in range(1, len(choices) + 1)] + ["c"])
 
         # Display decision
         if response:
-            display_decision = choices[int(response.content) - 1]
-            await DecisionDisplayEmbed(display_decision, ctx, ctx.channel).send_message()
+            selected_decision = choices[int(response) - 1]
+            await DecisionDisplayEmbed(selected_decision, ctx.channel, ctx).send_message()
+            return selected_decision
+        return None
 
-            def publish_check(msg):
-                return msg.content in ['y','n'] and msg.channel == ctx.channel
-
-            message = f"Do you wish to publish the above Decision to **{publish_channel}**?" + \
-                f"\n [**y**] = Publish this decision to **{publish_channel}**."  + \
-                "\n [**n**] = Continue editing the Decision."
-            await GenericDisplayEmbed('Confirm Publication', message, ctx.channel).send_message()
-            publish_response = ''
-            try:
-                publish_response = await self.bot.wait_for(
-                    "message", timeout=30, check=publish_check)
-            except asyncio.TimeoutError:
-                publish_response = None
-
-            if publish_response.content:
-                if publish_response.content == 'y':
-                    channel = next(
-                        (x for x in ctx.guild.channels if x.name == publish_channel), None)
-                    await DecisionDisplayEmbed(display_decision, ctx, channel).send_message()
-                    # TODO: set state of decision to published
-                else:
-                    publish_response = None
-            if publish_response is None:
-                await ctx.send('Selection timed out or was canceled.')
-
-        else:
-            await ctx.send("Selection timed out or was canceled.")
-
-    def find_decisions(self, decision_id = None, decision_state = None):
+    def find_decisions(self,
+                       decision_id: str = None,
+                       decision_state: DecisionState = None):
         """
         Find a Decision in state management based on filter criteria.
         params:
@@ -173,48 +308,22 @@ class Decisions(commands.Cog):
         state = self.state_management.get_state()
         decisions = []
 
+        # If an id is provided, return the decision with that id
         if decision_id:
             for decision in state:
                 if decision.id == decision_id:
                     return decision
                 # TODO: Handle scenario where none are found of this id
-
+        # If no id is provided, return all decisions with the provided state
         elif decision_state:
-            for decision in state:
+            for decision in state['decisions']:
                 if decision.state == decision_state:
                     decisions.append(decision)
                 # TODO: Handle scenario where none are found of this state
             return decisions
-
         else:
             return state
-
-    @commands.command(name='pt')
-    async def pt(self, ctx, timeout: int = 120):
-        """
-        Change a Decision to the PUBLISHED state and deliver the Decision to the publish channel.
-        params:
-            ctx: The Discord context in which the command has been executed within.
-            timeout: The amount of time that the Decision can be voted upon.
-        """
-        choices = []
-        dates = [
-            datetime.datetime.now(),
-            datetime.datetime.now()+datetime.timedelta(minutes=30),
-            datetime.datetime.now()+datetime.timedelta(minutes=60),
-            datetime.datetime.now()+datetime.timedelta(minutes=90),
-            datetime.datetime.now()+datetime.timedelta(minutes=120),
-        ]
-        message_str = 'What time do you want to publish at?'
-
-        # If multiple decisions are found, list each and have user select one
-        for date in dates:
-            rounded_date = round_time(date,datetime.timedelta(minutes=30), to='up')
-            choices.append(rounded_date)
-            message_str += f'\n [**{len(choices)}**] {str(rounded_date)}'
-
-        await GenericDisplayEmbed('Time', message_str, ctx.channel).send_message()
-
+  
 def round_time(date=None, date_delta=datetime.timedelta(minutes=1), to='average'):
     """
     Round a datetime object to a multiple of a timedelta

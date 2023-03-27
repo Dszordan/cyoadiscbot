@@ -12,7 +12,7 @@ class CharacterEmbed(discord.Embed):
 
     def __init__(
             self,
-            ctx,
+            ctx = None,
             player = None,
             title = None,
             description = None,
@@ -21,8 +21,8 @@ class CharacterEmbed(discord.Embed):
         ):
         super(CharacterEmbed, self).__init__(**kwargs)
         self.player = player
-        self.set_thumbnail(url=self.generate_thumbnail_url())
-        self.set_author(name=ctx.author.name,icon_url=ctx.author.avatar_url)
+        # self.set_thumbnail(url=self.generate_thumbnail_url())
+        # self.set_author(name=ctx.author.name,icon_url=ctx.author.avatar)
         self.colour = random.randint(0, 0xffffff)
         if title:
             self.title = title

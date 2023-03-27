@@ -26,17 +26,23 @@ class Decision:
 
     def __init__(
             self,
+            title,
             body,
-            actions,
+            actions = [],
             id_ = str(shortuuid.ShortUUID().random(length=22))
         ):
         self.id_ = id_
         if self.id_ is None:
             self.id_ = str(shortuuid.ShortUUID().random(length=22))
+        self.title = title
         self.body = body
         self.actions = actions
+        self.voted_action = None
         self.state = DecisionState.PREPARATION
-        self.timeout = None
+        self.publish_time = None
+        self.resolve_time = None
+        self.guild_id = None 
+        self.message_id = None
 
     def get_next_decisions(self):
         """
@@ -63,6 +69,7 @@ class Action:
             glyph,
             description,
             next_decision = None,
+            previous_decision = None,
             id_ = None
         ):
         self.id_ = id_
@@ -71,4 +78,5 @@ class Action:
         self.glyph = glyph
         self.description = description
         self.next_decision = next_decision
+        self.previous_decision = previous_decision
     

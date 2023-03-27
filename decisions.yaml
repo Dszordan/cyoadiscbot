@@ -1,0 +1,96 @@
+decisions:
+- &id001 !!python/object:model.decision.Decision
+  actions:
+  - &id002 !!python/object:model.decision.Action
+    description: Ultra Action
+    glyph: "\U0001F638"
+    id_: 3meXWNjQYozP8qr2QZYZ4h
+    next_decision: null
+    previous_decision: *id001
+  body: This is a cool body, too.
+  guild_id: 760201870999683154
+  id_: 3UyzhB8fpokVStAkSiQk8o
+  message_id: 1088282152132694058
+  publish_time: '2023-03-22 22:04:43.942693'
+  resolve_time: '2023-03-22 22:03:00'
+  state: &id004 !!python/object/apply:model.decision.DecisionState
+  - 3
+  timeout: null
+  title: Cool Title
+  voted_action: *id002
+- &id003 !!python/object:model.decision.Decision
+  actions:
+  - &id005 !!python/object:model.decision.Action
+    description: Approach the window, open the shutters.
+    glyph: "\U0001FA9F"
+    id_: EveKkJNjWacSJFwNUYU3eh
+    next_decision: null
+    previous_decision: *id003
+  - !!python/object:model.decision.Action
+    description: Read through the sheaf of papers.
+    glyph: "\U0001F9FB"
+    id_: Me6rm3QZ8TnyukHTSidYP2
+    next_decision: null
+    previous_decision: *id003
+  - !!python/object:model.decision.Action
+    description: Dance
+    glyph: "\U0001F483"
+    id_: fEYyskudJf86V8bz4K9FPm
+    next_decision: null
+    previous_decision: *id003
+  - !!python/object:model.decision.Action
+    description: Sleep
+    glyph: "\U0001F6CC"
+    id_: Th6YXHojF5pcaE8Z2V6AT3
+    next_decision: null
+    previous_decision: *id003
+  body: You hear yourself gasp, unsure if it's what woke you or if it were just a
+    symptom of the cause. You awake as you had plenty of mornings prior - sweating,
+    short of breath, hands shielding face. It takes a moment to calm yourself, staring
+    at the high ceiling trying to erase the moment from your memory. You find it easier
+    to think of the day ahead to erase the past and it is just enough to rouse you
+    to your feet. You look about the small, stately room. The windows wooden shutters
+    blocking the view. The breeze behind is just enough to steal through the slats
+    and a sheaf of papers rustle in response. Your feet hit the cool tile floor. What
+    do you always do first thing in the morning?
+  guild_id: 760201870999683154
+  id_: u6j6njjzLNLKAmiM3RfCRb
+  message_id: 1089687661142351892
+  publish_time: '2023-03-26 19:09:43.544834'
+  resolve_time: 2023-03-26 19:09:39.608113
+  state: *id004
+  title: Morning
+  voted_action: *id005
+- &id006 !!python/object:model.decision.Decision
+  actions:
+  - !!python/object:model.decision.Action
+    description: Approach the window, open the shutters.
+    glyph: "\U0001FA9F"
+    id_: 342zzivtFoQnWyGsNZWVo9
+    next_decision: null
+    previous_decision: *id006
+  - !!python/object:model.decision.Action
+    description: Read through the sheaf of papers.
+    glyph: "\U0001F4DC"
+    id_: 6rAxbWRrYweAa6scMcgaEn
+    next_decision: null
+    previous_decision: *id006
+  body: "You hear yourself gasp, unsure if it's what woke you or if it were just a\
+    \ symptom of the cause. You awake as you had plenty of mornings prior - sweating,\
+    \ short of breath, hands shielding face. It takes a moment to calm yourself, staring\
+    \ at the high ceiling trying to erase the last few dredges of that dream from\
+    \ your memory. Usually you find it easier to think of the day ahead to erase the\
+    \ past and it is just enough to rouse you to your feet. You look about the small,\
+    \ stately room. The windows wooden shutters blocking the view. The breeze beyond\
+    \ just enough to steal through the slats and a sheaf of papers rustle in response.\
+    \ Your feet hit the cool tile floor. \n\n**What do you always do first thing in\
+    \ the morning?**"
+  guild_id: 578770352335880212
+  id_: CtxjUSKFuJHJzBirfopPP4
+  message_id: 1089733528733896844
+  publish_time: '2023-03-26 22:11:59.722240'
+  resolve_time: 2023-03-27 14:11:57.341938
+  state: !!python/object/apply:model.decision.DecisionState
+  - 2
+  title: Morning
+  voted_action: null

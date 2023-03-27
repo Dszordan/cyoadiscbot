@@ -1,6 +1,7 @@
 """
     Send messages to channels using embeds a little easier.
 """
+import datetime
 from utils.embeds import CharacterEmbed, DefaultEmbed
 
 class DecisionDisplayEmbed():
@@ -8,7 +9,7 @@ class DecisionDisplayEmbed():
         Display Decisions to a specific channel using Discord Embeds
     """
 
-    def __init__(self, decision, ctx, channel):
+    def __init__(self, decision, channel, ctx = None):
         """
             Set up a DecisionDisplay using the context of the calling action
             params:
@@ -20,9 +21,13 @@ class DecisionDisplayEmbed():
         self.channel = channel
         self.decision = decision
 
-        rich_body = decision.body + '\n'
+        rich_body = '**' + decision.title + '**\n' + decision.body + '\n\n'
+        rich_body+= '**Actions:**\n'
         for action in decision.actions:
             rich_body+=action.glyph + ' = ' + action.description + '\n'
+        if decision.resolve_time:
+            resolve_time_pretty = datetime.datetime.strftime(decision.resolve_time, "%d %b at %-I:%M %p")
+            rich_body+= f'\nVoting closes at {resolve_time_pretty} \n'
 
         # create embed
         self.embed = CharacterEmbed(ctx)
@@ -41,6 +46,8 @@ class DecisionDisplayEmbed():
         for action in self.decision.actions:
             print(action.glyph + ' ' + action.description)
             await decision_message.add_reaction(action.glyph)
+        
+        return decision_message
 
 class GenericDisplayEmbed():
     """

@@ -1,0 +1,15 @@
+campaign_definition:
+  description: Each month in the isolated city of Theraii, an uncompromising dragon
+    demands an increasingly larger and larger human sacrifice, a task burdening the
+    conflicted Mayor Lord Seville. The Church of Eternity worships the dragon and
+    reigns in the population, for their sacrifice leads to eternal peace. Seville
+    finds himself torn between corrupt church, an undercurrent of dissent within the
+    populace and the looming threat of missing quota to an oppressive ancient dragon.
+  theme:
+  - Fantasy
+  - Drama
+  - 2nd Person
+  title: The Dragon's Bargain
+channels:
+  dm: cyoa-dm-channel
+  publish: "\U0001F432\uFE31the-dragons-bargain"
