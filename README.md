@@ -1,4 +1,2 @@
 # cyoadiscbot
 
-DISCORD_TOKEN=MTA4NTI5NzEzNzcwMjY4Njc0MA.GJgx_I.tapZ_Awq1yiLdB4tW-jpXvBOCLYGS5s_aqhAa0
-DISCORD_GUILD=Lux's Luxurious Server
