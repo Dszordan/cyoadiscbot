@@ -1,3 +1,7 @@
 channels:
   dm:
   publish:
+game_definition:
+  name:
+  description:
+  theme: []

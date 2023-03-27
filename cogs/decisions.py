@@ -183,6 +183,7 @@ class Decisions(commands.Cog):
         message_str = 'How many minutes from now do you want to resolve the decision at?'
         await GenericDisplayEmbed('Choose Resolve Time', message_str, ctx.channel).send_message()
         response = await self.user_interaction.await_response(ctx)
+        print(response)
         resolve_time = datetime.datetime.now() + datetime.timedelta(minutes=int(response))
 
         resolve_time_pretty = datetime.datetime.strftime(resolve_time, "%d %b at %-I:%M %p")
