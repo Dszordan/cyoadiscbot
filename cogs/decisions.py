@@ -32,8 +32,7 @@ class Decisions(commands.Cog):
     @commands.command(name='preparedecision')
     async def prepare_decision(self,
                                ctx: Context,
-                               title: str,
-                               body: str):
+                               title: str):
         """
         Prepare a new decision and persist it to state management.
         params:
@@ -42,6 +41,10 @@ class Decisions(commands.Cog):
             body: The content of the decision.
         """
         # create decision model
+        await GenericDisplayEmbed('Decision Body Update', 'What is the new body?', ctx.channel).send_message()
+        body = await self.user_interaction.await_response(ctx)
+        if not body:
+            return
         decision = Decision(title, body)
         decisions = self.state_management.get_state()
         decisions['decisions'].append(decision)
