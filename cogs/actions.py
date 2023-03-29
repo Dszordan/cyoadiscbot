@@ -19,27 +19,47 @@ class Actions(commands.Cog):
     @commands.command(name='createaction')
     async def create_action(self,
                              ctx: Context,
+                             channel = None,
                              decision: Decision = None):
         """
         Create an action for a decision.
         params:
             ctx: The Discord context in which the command has been executed within.
+            channel: The channel to send the action to. If not provided, the channel of the context will be used.
             decision: The decision to modify actions for. If not provided, the user will be prompted to select one.
         """
+        # Need to find a way to support both a channel and a DM
+        # Get away from passing around CTX and instead deal with channels / members
         selected_decision = decision
         if not decision:
             selected_decision = await self.decisions.choose_decision(ctx, DecisionState.PREPARATION)
         
         message_str = 'Describe the action. (c to cancel)\n'
-        await GenericDisplayEmbed('Create Action', message_str, ctx.channel).send_message()
-        action_description = await self.user_interaction.await_response(ctx)
+        await GenericDisplayEmbed('Create Action', message_str, channel).send_message()
+        action_description = await self.user_interaction.await_response(ctx, channel=channel)
+        if not action_description:
+            return None
         
         message_str = 'Give the action a glyph/emoji (c to cancel)\n'
-        await GenericDisplayEmbed('Create Action', message_str, ctx.channel).send_message()
-        action_glyph = await self.user_interaction.await_response(ctx)
+        await GenericDisplayEmbed('Create Action', message_str, channel).send_message()
+        action_glyph = await self.user_interaction.await_response(ctx, channel=channel)
+        if not action_glyph:
+            return None
+        
+        await DecisionDisplayEmbed(selected_decision, channel, ctx).send_message()
+        message_str = 'Does this look good? (y/n)\n'
+        await GenericDisplayEmbed('Create Action', message_str, channel).send_message()
+        response = await self.user_interaction.await_response(ctx, ['y', 'n'], timeout=30, channel=channel)
+        if not response:
+            return None
+        if response == 'n':
+            await ctx.author.send(f'Action creation cancelled.')
+            return None
 
-        selected_decision.actions.append(Action(glyph=action_glyph, description=action_description, previous_decision=selected_decision))
+        new_action = Action(glyph=action_glyph, description=action_description, previous_decision=selected_decision)
+        selected_decision.actions.append(new_action)
         await self.decisions.update_decision(selected_decision)
+        return new_action
 
     @commands.command(name='modifyactions')
     async def modify_actions(self,
@@ -71,6 +91,31 @@ class Actions(commands.Cog):
                 selected_action = choices[int(response) - 1]
                 await self.update_action(ctx, selected_decision, selected_action)
 
+    @commands.command(name='proposeaction')
+    async def propose_action(self,
+                            ctx: Context):
+        """
+        Propose an action to a decision.
+        params:
+            ctx: The Discord context in which the command has been executed within.
+        """
+        # DM the user who called the command
+        published_decisions = self.decisions.find_decisions(decision_state=DecisionState.PUBLISHED)
+        selected_decision = None
+        if not published_decisions:
+            await ctx.author.send('Unfortunately there are no published decisions to propose an action to. Wait until a decision has been published first!')
+            return
+        if len(published_decisions) > 1:
+            await ctx.author.send('There are multiple published decisions. Please select one of the following:')
+            selected_decision = await self.decisions.choose_decision(ctx, state=DecisionState.PUBLISHED)
+        else:
+            selected_decision = published_decisions[0]
+        await ctx.author.send(f'Hey there {ctx.author.name}, I\'m responding to your action proposal. Let\'s create a new action. What is the description of the action?')
+        new_action = await self.create_action(ctx.author, decision=selected_decision, channel=ctx.author)
+        if new_action:
+            # need republish or update them embed AND add an action to the decision
+            print("TODO: implement action proposal")
+
     @commands.command(name='updateaction')
     async def update_action(self,
                              ctx: Context,
@@ -87,7 +132,6 @@ class Actions(commands.Cog):
         if not decision:
             selected_decision = await self.decisions.choose_decision(ctx, DecisionState.PREPARATION)
         
-        # TODO: fix this
         selected_action = action
         if not action:
             message_str = 'Which action do you want to update? (c to cancel)\n'

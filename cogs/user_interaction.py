@@ -6,10 +6,13 @@ class UserInteraction(commands.Cog):
         self.bot = bot
 
     # Bot awaits for a response from the user.
-    async def await_response(self, ctx, valid_options = [], timeout = 30):
+    async def await_response(self, ctx, valid_options = [], timeout = 30, channel = None):
         # Ensure selection is within the bounds of choice
         def check(msg):
-            return msg.channel == ctx.channel \
+            context_channel = ctx.channel
+            if channel:
+                context_channel = channel
+            return msg.channel == context_channel \
                 and msg.author == ctx.author \
                 and msg.content.lower() in valid_options
 

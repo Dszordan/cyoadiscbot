@@ -52,7 +52,7 @@ class Decisions(commands.Cog):
 
         # Display decision
         await DecisionDisplayEmbed(decision, ctx.channel, ctx).send_message()
-
+        
     @commands.command(name='modifydecision')
     async def modify_decision(self,
                               ctx: Context):

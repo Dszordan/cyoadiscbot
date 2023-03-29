@@ -11,5 +11,8 @@ campaign_definition:
   - 2nd Person
   title: The Dragon's Bargain
 channels:
-  dm: cyoa-dm-channel
-  publish: "\U0001F432\uFE31the-dragons-bargain"
+  dm: testbotchannel
+  publish: publish-channel
+# channels:
+#   dm: cyoa-dm-channel
+#   publish: "\U0001F432\uFE31the-dragons-bargain"

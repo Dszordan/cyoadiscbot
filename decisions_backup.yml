@@ -89,8 +89,7 @@ decisions:
   id_: CtxjUSKFuJHJzBirfopPP4
   message_id: 1089733528733896844
   publish_time: '2023-03-26 22:11:59.722240'
-  resolve_time: 2023-03-29 14:11:57.341938
-  state: !!python/object/apply:model.decision.DecisionState
-  - 2
+  resolve_time: 2023-03-27 14:11:57.341938
+  state: *id004
   title: Morning
   voted_action: *id007
