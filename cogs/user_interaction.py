@@ -6,7 +6,11 @@ class UserInteraction(commands.Cog):
         self.bot = bot
 
     # Bot awaits for a response from the user.
-    async def await_response(self, ctx, valid_options = [], timeout = 30, channel = None):
+    async def await_response(self,
+                             ctx,
+                             valid_options = [],
+                             timeout = 30,
+                             channel = None):
         # Ensure selection is within the bounds of choice
         def check(msg):
             context_channel = ctx.channel
@@ -15,6 +19,8 @@ class UserInteraction(commands.Cog):
             return msg.channel == context_channel \
                 and msg.author == ctx.author \
                 and msg.content.lower() in valid_options
+        
+        communication_channel = channel if channel else ctx.channel
 
         response = ''
         try:
@@ -32,5 +38,5 @@ class UserInteraction(commands.Cog):
             else:
                 return response.content
         if response is None:
-            await ctx.send("Selection timed out or was canceled.")
+            await communication_channel.send("Selection timed out or was canceled.")
         return None

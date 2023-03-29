@@ -110,11 +110,48 @@ class Actions(commands.Cog):
             selected_decision = await self.decisions.choose_decision(ctx, state=DecisionState.PUBLISHED)
         else:
             selected_decision = published_decisions[0]
-        await ctx.author.send(f'Hey there {ctx.author.name}, I\'m responding to your action proposal. Let\'s create a new action. What is the description of the action?')
-        new_action = await self.create_action(ctx.author, decision=selected_decision, channel=ctx.author)
-        if new_action:
-            # need republish or update them embed AND add an action to the decision
-            print("TODO: implement action proposal")
+        await ctx.author.send(f'Hey there {ctx.author.name}, I\'m responding to your action proposal. Let\'s create a new action.')
+                
+        message_str = 'Describe the action. (c to cancel)\n'
+        await GenericDisplayEmbed('Create Action', message_str, ctx.author).send_message()
+        action_description = await self.user_interaction.await_response(ctx, channel=ctx.author)
+        if not action_description:
+            return None
+        
+        message_str = 'Give the action a glyph/emoji (c to cancel)\n'
+        await GenericDisplayEmbed('Create Action', message_str, ctx.author).send_message()
+        action_glyph = await self.user_interaction.await_response(ctx, channel=ctx.author)
+        if not action_glyph:
+            return None
+        
+        new_action = Action(glyph=action_glyph, description=action_description, previous_decision=selected_decision)
+        selected_decision.actions.append(new_action)
+        await DecisionDisplayEmbed(selected_decision, ctx.author, ctx).send_message()
+        message_str = 'Does this look good? (y/n)\n'
+        await GenericDisplayEmbed('Create Action', message_str, ctx.author).send_message()
+        response = await self.user_interaction.await_response(ctx, ['y', 'n'], timeout=30, channel=ctx.author)
+        if not response:
+            return None
+        if response == 'n':
+            await ctx.author.send(f'Action creation cancelled.')
+            return None
+
+        await self.decisions.update_decision(selected_decision)
+
+        # need republish or update them embed AND add an action to the decision
+        print("TODO: implement action proposal")
+        guild = self.bot.get_guild(selected_decision.guild_id)
+        publish_channel_name = self.state_management.get_admin_state()['channels']['publish']
+        publish_channel = next((x for x in guild.channels if x.name == publish_channel_name), None)
+        print(f'Publish channel: {publish_channel.name}')
+        print(f'Message ID: {selected_decision.message_id}')
+
+        # Find the specific discord message object
+        message = await publish_channel.fetch_message(selected_decision.message_id)
+        updated_embed = DecisionDisplayEmbed(selected_decision, ctx.author, ctx)
+        message.edit(embed=updated_embed.embed)
+        print(f'Updated message: {message.content}')
+        print(f'Updated embed: {message.embeds[0].to_dict()}')
 
     @commands.command(name='updateaction')
     async def update_action(self,
