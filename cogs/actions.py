@@ -1,7 +1,7 @@
 """
     A Discord Cog that is a collection of commands related to managing Decisions.
 """
-from discord import Emoji, PartialEmoji
+from discord import Emoji, PartialEmoji, Embed
 from discord.ext import commands
 from discord.ext.commands import Context
 
@@ -15,6 +15,13 @@ class Actions(commands.Cog):
         self.persistence = persistence
         self.decisions = self.bot.get_cog('Decisions')
         self.user_interaction = self.bot.get_cog('UserInteraction')
+
+    @commands.command(name='testa')
+    async def test_a(self, ctx: Context):
+        embed = Embed(title='testa')
+        message = await ctx.send(embed=embed)
+        embed = Embed(title='testb')
+        await message.edit(embed=embed)
 
     @commands.command(name='createaction')
     async def create_action(self,
@@ -131,6 +138,7 @@ class Actions(commands.Cog):
         await GenericDisplayEmbed('Create Action', message_str, ctx.author).send_message()
         response = await self.user_interaction.await_response(ctx, ['y', 'n'], timeout=30, channel=ctx.author)
         if not response:
+            print('No response')
             return None
         if response == 'n':
             await ctx.author.send(f'Action creation cancelled.')
@@ -148,6 +156,7 @@ class Actions(commands.Cog):
 
         # Find the specific discord message object
         message = await publish_channel.fetch_message(selected_decision.message_id)
+        print(f'Found message: {message.content}')
         updated_embed = DecisionDisplayEmbed(selected_decision, ctx.author, ctx)
         message.edit(embed=updated_embed.embed)
         print(f'Updated message: {message.content}')
