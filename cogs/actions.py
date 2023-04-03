@@ -107,7 +107,7 @@ class Actions(commands.Cog):
             ctx: The Discord context in which the command has been executed within.
         """
         # DM the user who called the command
-        published_decisions = self.decisions.find_decisions(decision_state=DecisionState.PUBLISHED)
+        published_decisions = self.decisions.find_decisions(decision_state=DecisionState.PUBLISHED, guild_id=ctx.guild.id)
         selected_decision = None
         if not published_decisions:
             await ctx.author.send('Unfortunately there are no published decisions to propose an action to. Wait until a decision has been published first!')
@@ -149,7 +149,7 @@ class Actions(commands.Cog):
         # need republish or update them embed AND add an action to the decision
         print("TODO: implement action proposal")
         guild = self.bot.get_guild(selected_decision.guild_id)
-        publish_channel_name = self.state_management.get_admin_state()['channels']['publish']
+        publish_channel_name = self.persistence.get_admin_state()['channels']['publish']
         publish_channel = next((x for x in guild.channels if x.name == publish_channel_name), None)
         print(f'Publish channel: {publish_channel.name}')
         print(f'Message ID: {selected_decision.message_id}')

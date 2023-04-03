@@ -7,6 +7,7 @@ import random
 
 from discord.ext import commands
 from discord.ext.commands import Context
+from py_linq import Enumerable
 
 from file_persistence import file_persistence
 from model.decision import Decision, DecisionState
@@ -46,6 +47,7 @@ class Decisions(commands.Cog):
         if not body:
             return
         decision = Decision(title, body)
+        decision.guild_id = ctx.guild.id
         decisions = self.state_management.get_state()
         decisions['decisions'].append(decision)
         self.state_management.write_state(decisions)
@@ -102,7 +104,7 @@ class Decisions(commands.Cog):
             ctx: The Discord context in which the command has been executed within.
             decision_state: The state to filter decisions on.
         """
-        decisions = self.find_decisions(decision_state=decision_state)
+        decisions = self.find_decisions(guild_id=ctx.guild, decision_state=decision_state)
         choices = []
         message_str = 'Found Decision(s), which one do you want to view. (c to cancel):'
 
@@ -148,26 +150,29 @@ class Decisions(commands.Cog):
         :return: None
         """
         # Find all Decisions in the PREPARATION state
-        decisions = self.find_decisions(decision_state=DecisionState.PREPARATION)
         choices = []
         admin_state = self.state_management.get_admin_state()
         publish_channel = admin_state['channels']['publish']
 
-        # Display choices
-        message_str = "Found decision(s), which one do you want to publish:\n"
-        for i, decision in enumerate(decisions):
-            choices.append(decision)
-            message_str += f"[**{i+1}**] {str(decision.title)[0:20]}\n"
-        message_str += "Type a number between 1 and {} to select a decision, or type 'c' to cancel.".format(len(choices))
-        await GenericDisplayEmbed('Multiple Decisions Found', message_str, ctx.channel).send_message()
+        selected_decision = self.choose_decision(ctx, state=DecisionState.PREPARATION)
+        if not selected_decision:
+            await ctx.send('No decisions found in that state.')
+            return
+        # # Display choices
+        # message_str = "Found decision(s), which one do you want to publish:\n"
+        # for i, decision in enumerate(decisions):
+        #     choices.append(decision)
+        #     message_str += f"[**{i+1}**] {str(decision.title)[0:20]}\n"
+        # message_str += f"Type a number between 1 and {len(choices)} to select a decision, or type 'c' to cancel."
+        # await GenericDisplayEmbed('Multiple Decisions Found', message_str, ctx.channel).send_message()
 
-        response = await self.user_interaction.await_response(ctx, [str(i) for i in range(1, len(choices) + 1)] + ["c"])
+        # response = await self.user_interaction.await_response(ctx, [str(i) for i in range(1, len(choices) + 1)] + ["c"])
 
         # Publish selected decision
-        if not response:
-            return
+        # if not response:
+        #     return
         
-        selected_decision = choices[int(response) - 1]
+        # selected_decision = choices[int(response) - 1]
         await DecisionDisplayEmbed(selected_decision, ctx, ctx.channel).send_message()
 
         # Confirm publication
@@ -204,7 +209,6 @@ class Decisions(commands.Cog):
         selected_decision.publish_time = str(datetime.datetime.now())
         selected_decision.resolve_time = resolve_time
         selected_decision.state = DecisionState.PUBLISHED
-        selected_decision.guild_id = ctx.guild.id
         await ctx.send(f'The decision will publish to {channel} with a resolve time at {selected_decision.resolve_time}')
         sent_message = await DecisionDisplayEmbed(selected_decision, channel, ctx).send_message()
         selected_decision.message_id = sent_message.id
@@ -277,11 +281,13 @@ class Decisions(commands.Cog):
             ctx: The Discord context in which the command has been executed within.
             state: The state of the decision to choose from.
         """
-        decisions = self.find_decisions(decision_state=state)
+        decisions = self.find_decisions(guild_id=ctx.guild, decision_state=state)
         choices = []
-        message_str = 'Found Decision(s), which one do you want to select. (c to cancel):'
+        if not decisions:
+            return None
 
         # If multiple decisions are found, list each and have user select one
+        message_str = 'Found Decision(s), which one do you want to select. (c to cancel):'
         for decision in decisions:
             choices.append(decision)
             message_str += f'\n [**{len(choices)}**] {str(decision.title)[0:20]}'
@@ -293,6 +299,7 @@ class Decisions(commands.Cog):
             [str(v) for v in range(1, len(choices) + 1)] + ["c"])
 
         # Display decision
+        # TODO: Let other functions handle display
         if response:
             selected_decision = choices[int(response) - 1]
             await DecisionDisplayEmbed(selected_decision, ctx.channel, ctx).send_message()
@@ -301,7 +308,8 @@ class Decisions(commands.Cog):
 
     def find_decisions(self,
                        decision_id: str = None,
-                       decision_state: DecisionState = None):
+                       decision_state: DecisionState = None,
+                       guild_id: str = None):
         """
         Find a Decision in state management based on filter criteria.
         params:
@@ -309,23 +317,20 @@ class Decisions(commands.Cog):
             decision_state: The state of Decisions to filter the results with.
         """
         state = self.state_management.get_state()
-        decisions = []
+        state_enumerable = Enumerable(state['decisions'])
 
         # If an id is provided, return the decision with that id
         if decision_id:
-            for decision in state:
-                if decision.id == decision_id:
-                    return decision
+            return state_enumerable.where(lambda x: x.id_ == decision_id)
                 # TODO: Handle scenario where none are found of this id
         # If no id is provided, return all decisions with the provided state
         elif decision_state:
-            for decision in state['decisions']:
-                if decision.state == decision_state:
-                    decisions.append(decision)
+            if guild_id:
+                state_enumerable = state_enumerable.where(lambda x: x.guild_id == guild_id)
+            state_enumerable = state_enumerable.where(lambda x: x.state == decision_state)
                 # TODO: Handle scenario where none are found of this state
-            return decisions
-        else:
-            return state
+            return state_enumerable
+        return None
   
 def round_time(date=None, date_delta=datetime.timedelta(minutes=1), to='average'):
     """

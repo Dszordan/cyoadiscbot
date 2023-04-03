@@ -1,4 +1,5 @@
 import asyncio
+from discord import DMChannel
 from discord.ext import commands
 class UserInteraction(commands.Cog):
     def __init__(self,
@@ -14,15 +15,12 @@ class UserInteraction(commands.Cog):
         # Ensure selection is within the bounds of choice
         def check(msg):
             context_channel = ctx.channel
+            # check if this is a DMChannel
+            if type(msg.channel) == DMChannel:
+                return msg.author == ctx.author \
+                and msg.content.lower() in valid_options
             if channel:
                 context_channel = channel
-            print(context_channel)
-            print(msg.channel)
-            print(msg.author)
-            print(ctx.author)
-            print(msg.content.lower())
-            print(msg)
-            # todo: need to handle a scenario where a DM channel is used
             return msg.channel == context_channel \
                 and msg.author == ctx.author \
                 and msg.content.lower() in valid_options

@@ -94,3 +94,15 @@ decisions:
   - 2
   title: Morning
   voted_action: *id007
+- !!python/object:model.decision.Decision
+  actions: []
+  body: testing
+  guild_id: 760201870999683154
+  id_: 3m5H6hD4nW79k4fATKZeiT
+  message_id: null
+  publish_time: null
+  resolve_time: null
+  state: !!python/object/apply:model.decision.DecisionState
+  - 1
+  title: test
+  voted_action: null
