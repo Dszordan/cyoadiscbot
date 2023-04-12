@@ -53,11 +53,12 @@ class Actions(commands.Cog):
         response = await self.user_interaction.await_response(ctx, ['y', 'n'])
         if not response:
             return
+        
+        user_response = ""
         if response == 'n':
             await ctx.send("Action denied.")
             selected_action.state = ActionState.DENIED
             await self.decisions.update_decision(decision)
-            return
         if response == 'y':
             await ctx.send("Action approved.")
             selected_action.state = ActionState.APPROVED
@@ -71,6 +72,10 @@ class Actions(commands.Cog):
             updated_embed = DecisionDisplayEmbed(decision, ctx.author, ctx)
             await message.edit(embed=updated_embed.embed)
             await message.add_reaction(selected_action.glyph)
+
+        # DM the user who created the action about the result
+        user = self.bot.get_user(selected_action.author_id)
+        await user.send(f"Your action proposal {selected_action.glyph} = {selected_action.description} has been reviewed by the DM. The result is: {response == 'y' and 'approved' or 'denied'}.")
 
     @commands.command(name='createaction')
     async def create_action(self,
@@ -87,9 +92,16 @@ class Actions(commands.Cog):
         # Need to find a way to support both a channel and a DM
         # Get away from passing around CTX and instead deal with channels / members
         logging.info(f'Creating action for decision {decision}')
+        if not channel:
+            channel = ctx.channel
+        
         selected_decision = decision
         if not decision:
             selected_decision = await self.decisions.choose_decision(ctx, DecisionState.PREPARATION)
+
+        if not selected_decision:
+            await channel.send('Before an action can be created, a decision needs to be prepared. Create a decision first.')
+            return
         
         message_str = 'Describe the action. (c to cancel)\n'
         await GenericDisplayEmbed('Create Action', message_str, channel).send_message()
@@ -103,6 +115,8 @@ class Actions(commands.Cog):
         if not action_glyph:
             return None
         
+        new_action = Action(glyph=action_glyph, description=action_description, previous_decision=selected_decision)
+        selected_decision.actions.append(new_action)
         await DecisionDisplayEmbed(selected_decision, channel, ctx).send_message()
         message_str = 'Does this look good? (y/n)\n'
         await GenericDisplayEmbed('Create Action', message_str, channel).send_message()
@@ -110,11 +124,9 @@ class Actions(commands.Cog):
         if not response:
             return None
         if response == 'n':
-            await ctx.author.send(f'Action creation cancelled.')
+            await channel.send(f'Action creation cancelled.')
             return None
 
-        new_action = Action(glyph=action_glyph, description=action_description, previous_decision=selected_decision)
-        selected_decision.actions.append(new_action)
         await self.decisions.update_decision(selected_decision)
         return new_action
 
@@ -198,9 +210,7 @@ class Actions(commands.Cog):
 
         # need republish or update them embed AND add an action to the decision
         guild = self.bot.get_guild(selected_decision.guild_id)
-        # publish_channel_name = self.persistence.get_admin_state()['channels']['publish']
         dm_channel_name = self.persistence.get_admin_state()['channels']['dm']
-        # publish_channel = next((x for x in guild.channels if x.name == publish_channel_name), None)
         dm_channel = next((x for x in guild.channels if x.name == dm_channel_name), None)
 
         # Send the action to the DM
