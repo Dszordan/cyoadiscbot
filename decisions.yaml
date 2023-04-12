@@ -90,13 +90,12 @@ decisions:
   message_id: 1089733528733896844
   publish_time: '2023-03-26 22:11:59.722240'
   resolve_time: 2023-03-29 14:11:57.341938
-  state: !!python/object/apply:model.decision.DecisionState
-  - 2
+  state: *id004
   title: Morning
   voted_action: *id007
 - !!python/object:model.decision.Decision
   actions: []
-  body: testing
+  body: Imagine that something really cool was in here.
   guild_id: 760201870999683154
   id_: 3m5H6hD4nW79k4fATKZeiT
   message_id: null
@@ -104,5 +103,34 @@ decisions:
   resolve_time: null
   state: !!python/object/apply:model.decision.DecisionState
   - 1
-  title: test
+  title: Super Cool Decision
   voted_action: null
+- &id008 !!python/object:model.decision.Decision
+  actions:
+  - !!python/object:model.decision.Action
+    description: Coollll
+    glyph: "\U0001F192"
+    id_: NAyBosM9LJcnd2xgN8hj3T
+    next_decision: null
+    previous_decision: *id008
+  - !!python/object:model.decision.Action
+    description: test
+    glyph: "\U0001F9EA"
+    id_: 36uEDz7yQ7LpGAoiqUZAzV
+    next_decision: null
+    previous_decision: *id008
+  - &id009 !!python/object:model.decision.Action
+    description: testinggg
+    glyph: "\U0001F697"
+    id_: qWjrKMJLLGRhDXvd8gpHuM
+    next_decision: null
+    previous_decision: *id008
+  body: Cooooool
+  guild_id: 760201870999683154
+  id_: 3esaSDdttVMDUue7spujDT
+  message_id: 1094077146420490282
+  publish_time: '2023-04-07 21:51:58.487079'
+  resolve_time: 2023-04-07 21:59:55.900260
+  state: *id004
+  title: New
+  voted_action: *id009

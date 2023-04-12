@@ -1,6 +1,8 @@
 """
     A Discord Cog that is a collection of commands related to managing Decisions.
 """
+import logging
+
 from discord import Emoji, PartialEmoji, Embed
 from discord.ext import commands
 from discord.ext.commands import Context
@@ -11,17 +13,11 @@ from utils.display import DecisionDisplayEmbed, GenericDisplayEmbed
 
 class Actions(commands.Cog):
     def __init__(self, bot, persistence: file_persistence):
+        logging.basicConfig(level=logging.INFO)
         self.bot = bot
         self.persistence = persistence
         self.decisions = self.bot.get_cog('Decisions')
         self.user_interaction = self.bot.get_cog('UserInteraction')
-
-    @commands.command(name='testa')
-    async def test_a(self, ctx: Context):
-        embed = Embed(title='testa')
-        message = await ctx.send(embed=embed)
-        embed = Embed(title='testb')
-        await message.edit(embed=embed)
 
     @commands.command(name='createaction')
     async def create_action(self,
@@ -37,6 +33,7 @@ class Actions(commands.Cog):
         """
         # Need to find a way to support both a channel and a DM
         # Get away from passing around CTX and instead deal with channels / members
+        logging.info(f'Creating action for decision {decision}')
         selected_decision = decision
         if not decision:
             selected_decision = await self.decisions.choose_decision(ctx, DecisionState.PREPARATION)
@@ -93,7 +90,8 @@ class Actions(commands.Cog):
         response = await self.user_interaction.await_response(ctx, [str(v) for v in range(1, len(selected_decision.actions) + 1)] + ['n', 'c'])
         if response:
             if response == 'n':
-                await self.create_action(ctx, selected_decision)
+                logging.info(f'Creating new action for decision {selected_decision}.')
+                await self.create_action(ctx, decision=selected_decision)
             else:
                 selected_action = choices[int(response) - 1]
                 await self.update_action(ctx, selected_decision, selected_action)
@@ -138,7 +136,6 @@ class Actions(commands.Cog):
         await GenericDisplayEmbed('Create Action', message_str, ctx.author).send_message()
         response = await self.user_interaction.await_response(ctx, ['y', 'n'], timeout=30, channel=ctx.author)
         if not response:
-            print('No response')
             return None
         if response == 'n':
             await ctx.author.send(f'Action creation cancelled.')
@@ -147,20 +144,15 @@ class Actions(commands.Cog):
         await self.decisions.update_decision(selected_decision)
 
         # need republish or update them embed AND add an action to the decision
-        print("TODO: implement action proposal")
         guild = self.bot.get_guild(selected_decision.guild_id)
         publish_channel_name = self.persistence.get_admin_state()['channels']['publish']
         publish_channel = next((x for x in guild.channels if x.name == publish_channel_name), None)
-        print(f'Publish channel: {publish_channel.name}')
-        print(f'Message ID: {selected_decision.message_id}')
 
         # Find the specific discord message object
         message = await publish_channel.fetch_message(selected_decision.message_id)
-        print(f'Found message: {message.content}')
         updated_embed = DecisionDisplayEmbed(selected_decision, ctx.author, ctx)
-        message.edit(embed=updated_embed.embed)
-        print(f'Updated message: {message.content}')
-        print(f'Updated embed: {message.embeds[0].to_dict()}')
+        await message.edit(embed=updated_embed.embed)
+        await message.add_reaction(new_action.glyph)
 
     @commands.command(name='updateaction')
     async def update_action(self,
@@ -211,4 +203,4 @@ class Actions(commands.Cog):
             selected_decision.actions[action_index].previous_decision = selected_decision
             await self.decisions.update_decision(selected_decision)
         else:
-            print('could not find that action to update.')
+            logging.error('could not find that action to update.')

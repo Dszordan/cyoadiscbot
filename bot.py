@@ -54,4 +54,4 @@ async def main():
     await bot.add_cog(Scheduler(bot))
 
 asyncio.run(main())
-bot.run(TOKEN, log_handler=handler, log_level=logging.DEBUG)
+bot.run(TOKEN, log_handler=handler, log_level=logging.INFO)

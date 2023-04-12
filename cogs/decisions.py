@@ -3,6 +3,7 @@
 """
 import asyncio
 import datetime
+import logging
 import random
 
 from discord.ext import commands
@@ -28,6 +29,7 @@ class Decisions(commands.Cog):
         self.state_management = state_management
         self.actions = self.bot.get_cog('Actions')
         self.user_interaction = self.bot.get_cog('UserInteraction')
+        logging.basicConfig(level=logging.INFO)
 
     # Bot Commands
     @commands.command(name='preparedecision')
@@ -64,7 +66,10 @@ class Decisions(commands.Cog):
             ctx: The Discord context in which the command has been executed within.
         """
         selected_decision = await self.choose_decision(ctx, state=DecisionState.PREPARATION)
-
+        if not selected_decision:
+            return
+        await DecisionDisplayEmbed(selected_decision, ctx.channel, ctx).send_message()
+        
         # TODO: Add a way to delete a decision
         # TODO: Add a way to change the resolve time. Might not be able to do this, since the resolve time is set at publish time..
         message_str = "Which property do you wish to update? (c to cancel)\n"
@@ -104,7 +109,10 @@ class Decisions(commands.Cog):
             ctx: The Discord context in which the command has been executed within.
             decision_state: The state to filter decisions on.
         """
-        decisions = self.find_decisions(guild_id=ctx.guild, decision_state=decision_state)
+        decisions = self.find_decisions(guild_id=ctx.guild.id, decision_state=decision_state)
+        if not decisions:
+            await ctx.send(f"No decisions found with the state {decision_state}.")
+            return
         choices = []
         message_str = 'Found Decision(s), which one do you want to view. (c to cancel):'
 
@@ -154,7 +162,7 @@ class Decisions(commands.Cog):
         admin_state = self.state_management.get_admin_state()
         publish_channel = admin_state['channels']['publish']
 
-        selected_decision = self.choose_decision(ctx, state=DecisionState.PREPARATION)
+        selected_decision = await self.choose_decision(ctx, state=DecisionState.PREPARATION)
         if not selected_decision:
             await ctx.send('No decisions found in that state.')
             return
@@ -182,16 +190,15 @@ class Decisions(commands.Cog):
         await GenericDisplayEmbed('Confirm Publication', message, ctx.channel).send_message()
         response = await self.user_interaction.await_response(ctx, ['y','n','c'])
         
+        if not response:
+            return
         if response.lower() == 'n':
             await ctx.send('Canceled operation.')
-        if not response or response.lower() == 'n':
-            return
 
         # Let the user choose a number of minutes from now to resolve the decision
         message_str = 'How many minutes from now do you want to resolve the decision at?'
         await GenericDisplayEmbed('Choose Resolve Time', message_str, ctx.channel).send_message()
         response = await self.user_interaction.await_response(ctx)
-        print(response)
         resolve_time = datetime.datetime.now() + datetime.timedelta(minutes=int(response))
 
         resolve_time_pretty = datetime.datetime.strftime(resolve_time, "%d %b at %-I:%M %p")
@@ -223,19 +230,15 @@ class Decisions(commands.Cog):
         """ Checks the time for each published decision and checks if the resolve time is up """
         decisions = self.find_decisions(decision_state=DecisionState.PUBLISHED)
         for decision in decisions:
-            if decision.resolve_time < datetime.datetime.now():
-                print(f'Resolve time is up for {decision.id_}' )
-                # Count votes and choose the winner
-                # Inform  the publish channel of the winner
-                # Inform the DM channel of the winner and the next decision
-                # TODO: Implement this
-
+            if decision.resolve_time and (decision.resolve_time < datetime.datetime.now()):
+                logging.info(f'Resolve time is up for {decision.id_}, {decision.title}')
                 guild = self.bot.get_guild(decision.guild_id)
                 publish_channel_name = self.state_management.get_admin_state()['channels']['publish']
                 dm_channel_name = self.state_management.get_admin_state()['channels']['dm']
+                logging.info(f'Publish channel name: {publish_channel_name}, DM channel name: {dm_channel_name}`')
                 publish_channel = next((x for x in guild.channels if x.name == publish_channel_name), None)
                 dm_channel = next((x for x in guild.channels if x.name == dm_channel_name), None)
-                print(f'Publish channel: {publish_channel.name}')
+                logging.info(f'Publish channel: {publish_channel.name}')
 
                 # Find the specific discord message object
                 message = await publish_channel.fetch_message(decision.message_id)
@@ -281,7 +284,7 @@ class Decisions(commands.Cog):
             ctx: The Discord context in which the command has been executed within.
             state: The state of the decision to choose from.
         """
-        decisions = self.find_decisions(guild_id=ctx.guild, decision_state=state)
+        decisions = self.find_decisions(guild_id=ctx.guild.id, decision_state=state)
         choices = []
         if not decisions:
             return None
@@ -299,10 +302,9 @@ class Decisions(commands.Cog):
             [str(v) for v in range(1, len(choices) + 1)] + ["c"])
 
         # Display decision
-        # TODO: Let other functions handle display
         if response:
             selected_decision = choices[int(response) - 1]
-            await DecisionDisplayEmbed(selected_decision, ctx.channel, ctx).send_message()
+            logging.info(f'Selected decision: {selected_decision}')
             return selected_decision
         return None
 
@@ -318,16 +320,20 @@ class Decisions(commands.Cog):
         """
         state = self.state_management.get_state()
         state_enumerable = Enumerable(state['decisions'])
+        logging.info(f'Finding decisions with id: {decision_id}, state: {decision_state}, guild_id: {guild_id}')
 
         # If an id is provided, return the decision with that id
         if decision_id:
-            return state_enumerable.where(lambda x: x.id_ == decision_id)
+            decision = state_enumerable.where(lambda x: x.id_ == decision_id).first_or_default()
+            logging.info(f'Found decision: {decision}')
+            return decision
                 # TODO: Handle scenario where none are found of this id
         # If no id is provided, return all decisions with the provided state
         elif decision_state:
             if guild_id:
                 state_enumerable = state_enumerable.where(lambda x: x.guild_id == guild_id)
             state_enumerable = state_enumerable.where(lambda x: x.state == decision_state)
+            logging.info(f'Found decisions: {state_enumerable}')
                 # TODO: Handle scenario where none are found of this state
             return state_enumerable
         return None
