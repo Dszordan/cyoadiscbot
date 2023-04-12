@@ -6,10 +6,11 @@ import logging
 from discord import Emoji, PartialEmoji, Embed
 from discord.ext import commands
 from discord.ext.commands import Context
+from py_linq import Enumerable
 
 from file_persistence import file_persistence
 from model.decision import Decision, DecisionState, Action, ActionState
-from utils.display import DecisionDisplayEmbed, GenericDisplayEmbed
+from utils.display import ActionDisplayEmbed, DecisionDisplayEmbed, GenericDisplayEmbed
 
 class Actions(commands.Cog):
     def __init__(self, bot, persistence: file_persistence):
@@ -18,6 +19,58 @@ class Actions(commands.Cog):
         self.persistence = persistence
         self.decisions = self.bot.get_cog('Decisions')
         self.user_interaction = self.bot.get_cog('UserInteraction')
+
+    @commands.command(name='reviewactions')
+    async def review_actions(self,
+                             ctx: Context):
+        """
+        Receive a list of proposed actions and modify properties of one of them.
+        params:
+            ctx: The Discord context in which the command has been executed within.
+        """
+        logging.info("Reviewing actions.")
+        await ctx.send("Reviewing proposed actions.")
+        selected_action = await self.choose_action(ctx, ActionState.PROPOSED)
+        logging.info(f"found proposed actions, {selected_action}")
+        if not selected_action:
+            ctx.send("Found no proposed actions to review.")
+            return
+
+        decision = selected_action.previous_decision
+        decision.actions.append(selected_action)
+
+        # display proposed action
+        await ActionDisplayEmbed(selected_action, ctx.channel, ctx).send_message()
+        await ctx.send("This action would apply to the following decision.")
+
+        # display associated decision
+        await DecisionDisplayEmbed(selected_action.previous_decision, ctx.channel, ctx).send_message()
+        
+        # prompt user to approve or deny the action
+        str_message = "Approve the proposed action and update the already published decision?\n"
+        str_message += "Type 'y' to approve, 'n' to decline the proposal entirely, or 'c' to cancel."
+        await ctx.send(str_message)
+        response = await self.user_interaction.await_response(ctx, ['y', 'n'])
+        if not response:
+            return
+        if response == 'n':
+            await ctx.send("Action denied.")
+            selected_action.state = ActionState.DENIED
+            await self.decisions.update_decision(decision)
+            return
+        if response == 'y':
+            await ctx.send("Action approved.")
+            selected_action.state = ActionState.APPROVED
+            await self.decisions.update_decision(decision)  
+
+            # Find the specific discord message object and update it
+            guild = self.bot.get_guild(decision.guild_id)
+            publish_channel_name = self.persistence.get_admin_state()['channels']['publish']
+            publish_channel = next((x for x in guild.channels if x.name == publish_channel_name), None)
+            message = await publish_channel.fetch_message(decision.message_id)
+            updated_embed = DecisionDisplayEmbed(decision, ctx.author, ctx)
+            await message.edit(embed=updated_embed.embed)
+            await message.add_reaction(selected_action.glyph)
 
     @commands.command(name='createaction')
     async def create_action(self,
@@ -129,7 +182,7 @@ class Actions(commands.Cog):
         if not action_glyph:
             return None
         
-        new_action = Action(glyph=action_glyph, description=action_description, previous_decision=selected_decision, action_state=ActionState.PROPOSED)
+        new_action = Action(glyph=action_glyph, description=action_description, previous_decision=selected_decision, action_state=ActionState.PROPOSED, author_id=ctx.author.id)
         selected_decision.actions.append(new_action)
         await DecisionDisplayEmbed(selected_decision, ctx.author, ctx).send_message()
         message_str = 'Does this look good? (y/n)\n If so, the action will be sent to the DM to be approved.\n'
@@ -161,11 +214,7 @@ class Actions(commands.Cog):
         await message.add_reaction('\U0001F44D')
         await message.add_reaction('\U0001F44E')
 
-        # Find the specific discord message object
-        # message = await publish_channel.fetch_message(selected_decision.message_id)
-        # updated_embed = DecisionDisplayEmbed(selected_decision, ctx.author, ctx)
-        # await message.edit(embed=updated_embed.embed)
-        # await message.add_reaction(new_action.glyph)
+
 
     @commands.Cog.listener()
     async def on_reaction_add(self, reaction, user):
@@ -199,7 +248,6 @@ class Actions(commands.Cog):
             # if not action:
             #     logging.error(f'Could not find action for reaction {reaction.emoji}')
             #     return
-
 
     @commands.command(name='updateaction')
     async def update_action(self,
@@ -251,3 +299,69 @@ class Actions(commands.Cog):
             await self.decisions.update_decision(selected_decision)
         else:
             logging.error('could not find that action to update.')
+
+    async def choose_action(self,
+                              ctx: Context,
+                              state: ActionState):
+        """
+        choose_action: Display a list of actions and allow the user to select one.
+        params:
+            ctx: The Discord context in which the command has been executed within.
+            state: The state of the action to choose from.
+        """
+        actions = await self.find_actions(guild_id=ctx.guild.id, action_state=state)
+        choices = []
+        if not actions:
+            return None
+
+        # If multiple actions are found, list each and have user select one
+        message_str = 'Found Action(s), which one do you want to select. (c to cancel):'
+        for action in actions:
+            choices.append(action)
+            message_str += f'\n [**{len(choices)}**] {action.glyph} {str(action.description)[0:20]} for decision **{action.previous_decision.title}**'
+
+        # Send choices, await a legitimate response
+        await GenericDisplayEmbed('Select action', message_str, ctx.channel).send_message()
+
+        response = await self.user_interaction.await_response(ctx, 
+            [str(v) for v in range(1, len(choices) + 1)] + ["c"])
+
+        # Display action
+        if response:
+            selected_action = choices[int(response) - 1]
+            logging.info(f'Selected action: {selected_action}')
+            return selected_action
+        return None
+
+    async def find_actions(self,
+                        action_id: str = None,
+                        action_state: ActionState = None,
+                        guild_id: str = None):
+        """
+        Find an Action in state management based on filter criteria.
+        params:
+            action_id: The unique identifier of a Action to filter the results with.
+            action_state: The state of Actions to filter the results with.
+            guild_id: The guild id of Actions to filter the results with.
+        """
+        state = self.persistence.get_state()
+        state_enumerable = Enumerable(state['decisions'])
+        logging.info(f'Finding actions with id: {action_id}, state: {action_state}, guild_id: {guild_id}')
+
+        # If an id is provided, return the decision with that id
+        if action_id:
+            # use pylinq to find actions with the provided id
+            action = state_enumerable.select_many(lambda x: x.actions).where(lambda x: x.id_ == action_id).first_or_default()
+            logging.info(f'Found action: {action}')
+            return action
+                # TODO: Handle scenario where none are found of this id
+        # If no id is provided, return all decisions with the provided state
+        elif action_state:
+            if guild_id:
+                state_enumerable = state_enumerable.where(lambda x: x.guild_id == guild_id)
+            state_enumerable = state_enumerable.select_many(lambda x: x.actions).where(lambda x: x.action_state == action_state)
+            logging.info(f'Found actions: {state_enumerable}')
+            logging.info(f'Found actions: {state_enumerable[0]}')
+                # TODO: Handle scenario where none are found of this state
+            return state_enumerable
+        return None

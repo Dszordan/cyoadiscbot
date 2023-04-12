@@ -84,7 +84,8 @@ class Action:
             next_decision = None,
             previous_decision = None,
             id_ = None,
-            action_state = ActionState.PUBLISHED
+            action_state = ActionState.PUBLISHED,
+            author_id = None
         ):
         self.id_ = id_
         if self.id_ is None:
@@ -94,4 +95,5 @@ class Action:
         self.next_decision = next_decision
         self.previous_decision = previous_decision
         self.action_state = action_state
+        self.author_id = author_id
     

@@ -317,6 +317,7 @@ class Decisions(commands.Cog):
         params:
             id: The unique identifier of a Decision to filter the results with.
             decision_state: The state of Decisions to filter the results with.
+            guild_id: The guild id of the decision to filter the results with.
         """
         state = self.state_management.get_state()
         state_enumerable = Enumerable(state['decisions'])

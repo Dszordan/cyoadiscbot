@@ -48,6 +48,41 @@ class DecisionDisplayEmbed():
             await decision_message.add_reaction(action.glyph)
         
         return decision_message
+    
+class ActionDisplayEmbed():
+    """
+        Display Actions to a specific channel using Discord Embeds
+    """
+
+    def __init__(self, action, channel, ctx = None):
+        """
+            Set up an ActionDisplay using the context of the calling action
+            params:
+                action: The Action to display
+                ctx: The Discord Context that this display was called from
+                channel: The channel intended to send the embed
+        """
+        self.ctx = ctx
+        self.channel = channel
+        self.action = action
+
+    async def send_message(self):
+        """
+            Send a message to the Channel found in self.channel
+        """
+        user = await self.ctx.bot.fetch_user(int(self.action.author_id))
+        rich_body = f'Action Author: **{user.name}**\n\n'
+        rich_body += f'**{self.action.glyph}** = **{self.action.description}**\n\n'
+
+        # create embed
+        self.embed = CharacterEmbed(self.ctx)
+        self.embed.description = rich_body
+
+        # Send embed
+        action_message = await self.channel.send(
+            embed=self.embed)
+        
+        return action_message
 
 class GenericDisplayEmbed():
     """
