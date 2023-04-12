@@ -8,7 +8,7 @@ from discord.ext import commands
 from discord.ext.commands import Context
 
 from file_persistence import file_persistence
-from model.decision import Decision, DecisionState, Action
+from model.decision import Decision, DecisionState, Action, ActionState
 from utils.display import DecisionDisplayEmbed, GenericDisplayEmbed
 
 class Actions(commands.Cog):
@@ -118,22 +118,22 @@ class Actions(commands.Cog):
         await ctx.author.send(f'Hey there {ctx.author.name}, I\'m responding to your action proposal. Let\'s create a new action.')
                 
         message_str = 'Describe the action. (c to cancel)\n'
-        await GenericDisplayEmbed('Create Action', message_str, ctx.author).send_message()
+        await GenericDisplayEmbed('Propose Action', message_str, ctx.author).send_message()
         action_description = await self.user_interaction.await_response(ctx, channel=ctx.author)
         if not action_description:
             return None
         
         message_str = 'Give the action a glyph/emoji (c to cancel)\n'
-        await GenericDisplayEmbed('Create Action', message_str, ctx.author).send_message()
+        await GenericDisplayEmbed('Propose Action', message_str, ctx.author).send_message()
         action_glyph = await self.user_interaction.await_response(ctx, channel=ctx.author)
         if not action_glyph:
             return None
         
-        new_action = Action(glyph=action_glyph, description=action_description, previous_decision=selected_decision)
+        new_action = Action(glyph=action_glyph, description=action_description, previous_decision=selected_decision, action_state=ActionState.PROPOSED)
         selected_decision.actions.append(new_action)
         await DecisionDisplayEmbed(selected_decision, ctx.author, ctx).send_message()
-        message_str = 'Does this look good? (y/n)\n'
-        await GenericDisplayEmbed('Create Action', message_str, ctx.author).send_message()
+        message_str = 'Does this look good? (y/n)\n If so, the action will be sent to the DM to be approved.\n'
+        await GenericDisplayEmbed('Propose Action', message_str, ctx.author).send_message()
         response = await self.user_interaction.await_response(ctx, ['y', 'n'], timeout=30, channel=ctx.author)
         if not response:
             return None
@@ -145,14 +145,61 @@ class Actions(commands.Cog):
 
         # need republish or update them embed AND add an action to the decision
         guild = self.bot.get_guild(selected_decision.guild_id)
-        publish_channel_name = self.persistence.get_admin_state()['channels']['publish']
-        publish_channel = next((x for x in guild.channels if x.name == publish_channel_name), None)
+        # publish_channel_name = self.persistence.get_admin_state()['channels']['publish']
+        dm_channel_name = self.persistence.get_admin_state()['channels']['dm']
+        # publish_channel = next((x for x in guild.channels if x.name == publish_channel_name), None)
+        dm_channel = next((x for x in guild.channels if x.name == dm_channel_name), None)
+
+        # Send the action to the DM
+        message_str = "A new action has been proposed for the following decision:\n"
+        message_str += f'{selected_decision.title}\n'
+        message_str += f'{selected_decision.body}\n'
+        message_str += f'Proposed by: {ctx.author.name}\n'
+        message_str += f'Action: {new_action.glyph} = {new_action.description}\n'
+        message_str += f'Please react with \U0001F44D to approve or \U0001F44E to reject.\n'
+        message = await GenericDisplayEmbed('Action Proposal', message_str, dm_channel).send_message()
+        await message.add_reaction('\U0001F44D')
+        await message.add_reaction('\U0001F44E')
 
         # Find the specific discord message object
-        message = await publish_channel.fetch_message(selected_decision.message_id)
-        updated_embed = DecisionDisplayEmbed(selected_decision, ctx.author, ctx)
-        await message.edit(embed=updated_embed.embed)
-        await message.add_reaction(new_action.glyph)
+        # message = await publish_channel.fetch_message(selected_decision.message_id)
+        # updated_embed = DecisionDisplayEmbed(selected_decision, ctx.author, ctx)
+        # await message.edit(embed=updated_embed.embed)
+        # await message.add_reaction(new_action.glyph)
+
+    @commands.Cog.listener()
+    async def on_reaction_add(self, reaction, user):
+        if user == self.bot.user:
+            return
+        if reaction.message.channel.name == self.persistence.get_admin_state()['channels']['dm']:
+            # Find the decision that this action belongs to
+            logging.info(f'Action reaction received: {reaction.emoji} in channel {reaction.message.channel.name}')
+            # if reaction message body contains 'Action Proposal'
+            if 'new action has been proposed' in reaction.message.embeds[0].description:
+                logging.info(f'Action reaction received: {reaction.emoji} in channel {reaction.message.channel.name}')
+                # TODO: Find a way to get the decision from the message
+                
+                # if reaction.emoji == '\U0001F44D':
+                #     action.action_state = ActionState.APPROVED
+                #     await self.decisions.update_decision(decision)
+                #     await reaction.message.channel.send(f'Action {action.glyph} = {action.description} has been approved.')
+                #     await self.publish_decision(reaction.message.channel, decision)
+                # elif reaction.emoji == '\U0001F44E':
+                #     action.action_state = ActionState.REJECTED
+                #     await self.decisions.update_decision(decision)
+                #     await reaction.message.channel.send(f'Action {action.glyph} = {action.description} has been rejected.')
+                #     await self.publish_decision(reaction.message.channel, decision)
+                # else:
+                #     logging.error(f'Unknown reaction {reaction.emoji}')
+            # decision = self.decisions.find_decision_by_message_id(reaction.message.id)
+            # if not decision:
+            #     logging.error(f'Could not find decision for message {reaction.message.id}')
+            #     return
+            # action = next((x for x in decision.actions if x.glyph == reaction.emoji), None)
+            # if not action:
+            #     logging.error(f'Could not find action for reaction {reaction.emoji}')
+            #     return
+
 
     @commands.command(name='updateaction')
     async def update_action(self,

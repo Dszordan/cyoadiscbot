@@ -54,6 +54,19 @@ class Decision:
                 next_decisions.append(action.next_decision)
         return next_decisions
 
+class ActionState(Enum):
+    """
+        The different states of a Action
+        Proposal = The Action has been proposed by a player, but not yet reviewed by the DM.
+        Approved = The Action has been approved by the DM and the published decision it is associated with will be updated.
+        Denied = The Action has been denied by the DM.
+        Published = An Action created by the DM and published with the associated Decision.
+    """
+    PROPOSED = 1
+    APPROVED = 2
+    DENIED = 3
+    PUBLISHED = 4
+
 class Action:
     """
         Simple object model for an Action
@@ -70,7 +83,8 @@ class Action:
             description,
             next_decision = None,
             previous_decision = None,
-            id_ = None
+            id_ = None,
+            action_state = ActionState.PUBLISHED
         ):
         self.id_ = id_
         if self.id_ is None:
@@ -79,4 +93,5 @@ class Action:
         self.description = description
         self.next_decision = next_decision
         self.previous_decision = previous_decision
+        self.action_state = action_state
     

@@ -93,38 +93,81 @@ decisions:
   state: *id004
   title: Morning
   voted_action: *id007
-- !!python/object:model.decision.Decision
-  actions: []
+- &id008 !!python/object:model.decision.Decision
+  actions:
+  - !!python/object:model.decision.Action
+    action_state: &id009 !!python/object/apply:model.decision.ActionState
+    - 1
+    description: test
+    glyph: "\U0001F9EA"
+    id_: 8CGzqErcuBm7ESeFNTrRYn
+    next_decision: null
+    previous_decision: *id008
+  - !!python/object:model.decision.Action
+    action_state: *id009
+    description: testtt
+    glyph: "\U0001F3BD"
+    id_: 34SDECopiYH5eHtxDdaRpn
+    next_decision: null
+    previous_decision: *id008
+  - !!python/object:model.decision.Action
+    action_state: *id009
+    description: test1
+    glyph: "\U0001F4FB"
+    id_: oNgzmR6opzEUut3VmX98Ho
+    next_decision: null
+    previous_decision: *id008
+  - !!python/object:model.decision.Action
+    action_state: *id009
+    description: etstsfcd
+    glyph: "\u26FD"
+    id_: vA4VzXosq9jxG3CwnKLbYH
+    next_decision: null
+    previous_decision: *id008
+  - !!python/object:model.decision.Action
+    action_state: *id009
+    description: DOIT
+    glyph: "\U0001F6AF"
+    id_: Xr79NciWrR7hGisPdndxY5
+    next_decision: null
+    previous_decision: *id008
+  - !!python/object:model.decision.Action
+    action_state: *id009
+    description: fkfkdkf
+    glyph: "\U0001F518"
+    id_: CZn6yZUAcEteqyQGSZtxr7
+    next_decision: null
+    previous_decision: *id008
   body: Imagine that something really cool was in here.
   guild_id: 760201870999683154
   id_: 3m5H6hD4nW79k4fATKZeiT
-  message_id: null
-  publish_time: null
-  resolve_time: null
+  message_id: 1095541715043090576
+  publish_time: '2023-04-11 22:51:39.772148'
+  resolve_time: 2023-04-11 23:56:38.161402
   state: !!python/object/apply:model.decision.DecisionState
-  - 1
+  - 2
   title: Super Cool Decision
   voted_action: null
-- &id008 !!python/object:model.decision.Decision
+- &id010 !!python/object:model.decision.Decision
   actions:
   - !!python/object:model.decision.Action
     description: Coollll
     glyph: "\U0001F192"
     id_: NAyBosM9LJcnd2xgN8hj3T
     next_decision: null
-    previous_decision: *id008
+    previous_decision: *id010
   - !!python/object:model.decision.Action
     description: test
     glyph: "\U0001F9EA"
     id_: 36uEDz7yQ7LpGAoiqUZAzV
     next_decision: null
-    previous_decision: *id008
-  - &id009 !!python/object:model.decision.Action
+    previous_decision: *id010
+  - &id011 !!python/object:model.decision.Action
     description: testinggg
     glyph: "\U0001F697"
     id_: qWjrKMJLLGRhDXvd8gpHuM
     next_decision: null
-    previous_decision: *id008
+    previous_decision: *id010
   body: Cooooool
   guild_id: 760201870999683154
   id_: 3esaSDdttVMDUue7spujDT
@@ -133,4 +176,4 @@ decisions:
   resolve_time: 2023-04-07 21:59:55.900260
   state: *id004
   title: New
-  voted_action: *id009
+  voted_action: *id011

@@ -69,6 +69,6 @@ class GenericDisplayEmbed():
         """
             Send a message to the Channel found in self.channel
         """
-        await self.channel.send(
+        return await self.channel.send(
             # content=rich_body,
             embed=self.embed)
