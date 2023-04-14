@@ -2,7 +2,9 @@
     Send messages to channels using embeds a little easier.
 """
 import datetime
+from py_linq import Enumerable
 from utils.embeds import CharacterEmbed, DefaultEmbed
+from model.decision import ActionState
 
 class DecisionDisplayEmbed():
     """
@@ -33,17 +35,22 @@ class DecisionDisplayEmbed():
         self.embed = CharacterEmbed(ctx)
         self.embed.description = rich_body
 
-    async def send_message(self):
+    async def send_message(self,
+                           action_states = None):
         """
             Send a message to the Channel found in self.channel
         """
-        # Send embed
+        # Send embed to channel
         decision_message = await self.channel.send(
-            # content=rich_body,
             embed=self.embed)
 
+        if not action_states:
+            action_states = [ActionState.PUBLISHED, ActionState.APPROVED]
+        all_actions = Enumerable(self.decision.actions)
+        display_actions = all_actions.where(lambda x: x.state in action_states).to_list()
+
         # Add reactions to embed
-        for action in self.decision.actions:
+        for action in display_actions:
             print(action.glyph + ' ' + action.description)
             await decision_message.add_reaction(action.glyph)
         

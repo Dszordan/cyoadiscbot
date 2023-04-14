@@ -33,11 +33,10 @@ class Actions(commands.Cog):
         selected_action = await self.choose_action(ctx, ActionState.PROPOSED)
         logging.info(f"found proposed actions, {selected_action}")
         if not selected_action:
-            ctx.send("Found no proposed actions to review.")
+            await ctx.send("Found no proposed actions to review.")
             return
 
         decision = selected_action.previous_decision
-        decision.actions.append(selected_action)
 
         # display proposed action
         await ActionDisplayEmbed(selected_action, ctx.channel, ctx).send_message()
@@ -54,15 +53,34 @@ class Actions(commands.Cog):
         if not response:
             return
         
-        user_response = ""
         if response == 'n':
             await ctx.send("Action denied.")
-            selected_action.state = ActionState.DENIED
+            # update the specific action within the decision
+            for action in decision.actions:
+                if action.id_ == selected_action.id_:
+                    action.state = ActionState.DENIED
             await self.decisions.update_decision(decision)
         if response == 'y':
             await ctx.send("Action approved.")
-            selected_action.state = ActionState.APPROVED
-            await self.decisions.update_decision(decision)  
+            # update the specific action within the decisions list of actions
+            for action in decision.actions:
+                if action.id_ == selected_action.id_:
+                    action.state = ActionState.APPROVED
+            for action in decision.actions:
+                logging.info(f"action = {action.id_}, {action.state}")
+            index = -1
+            for i, obj in enumerate(decision.actions):
+                if obj.id_ == action.id_:
+                    index = i
+                    break
+
+            if index != -1:
+                # Replace object at the found index
+                decision.actions[index] = selected_action
+            else:
+                # Log error
+                logging.error(f"Could not find action {selected_action.id_} in decision {decision.id_}")
+            await self.decisions.update_decision(decision)
 
             # Find the specific discord message object and update it
             guild = self.bot.get_guild(decision.guild_id)
@@ -75,6 +93,8 @@ class Actions(commands.Cog):
 
         # DM the user who created the action about the result
         user = self.bot.get_user(selected_action.author_id)
+        logging.info(f"selected_action.author_id = {selected_action.author_id}")
+        logging.info(f"DMing user {user} about action {selected_action}")
         await user.send(f"Your action proposal {selected_action.glyph} = {selected_action.description} has been reviewed by the DM. The result is: {response == 'y' and 'approved' or 'denied'}.")
 
     @commands.command(name='createaction')
@@ -115,7 +135,7 @@ class Actions(commands.Cog):
         if not action_glyph:
             return None
         
-        new_action = Action(glyph=action_glyph, description=action_description, previous_decision=selected_decision)
+        new_action = Action(glyph=action_glyph, description=action_description, previous_decision=selected_decision, author_id=ctx.author.id)
         selected_decision.actions.append(new_action)
         await DecisionDisplayEmbed(selected_decision, channel, ctx).send_message()
         message_str = 'Does this look good? (y/n)\n'
@@ -194,7 +214,7 @@ class Actions(commands.Cog):
         if not action_glyph:
             return None
         
-        new_action = Action(glyph=action_glyph, description=action_description, previous_decision=selected_decision, action_state=ActionState.PROPOSED, author_id=ctx.author.id)
+        new_action = Action(glyph=action_glyph, description=action_description, previous_decision=selected_decision, state=ActionState.PROPOSED, author_id=ctx.author.id)
         selected_decision.actions.append(new_action)
         await DecisionDisplayEmbed(selected_decision, ctx.author, ctx).send_message()
         message_str = 'Does this look good? (y/n)\n If so, the action will be sent to the DM to be approved.\n'
@@ -219,45 +239,45 @@ class Actions(commands.Cog):
         message_str += f'{selected_decision.body}\n'
         message_str += f'Proposed by: {ctx.author.name}\n'
         message_str += f'Action: {new_action.glyph} = {new_action.description}\n'
-        message_str += f'Please react with \U0001F44D to approve or \U0001F44E to reject.\n'
+        message_str += f'Review the action in the DM channel with the command **$reviewactions**'
+        # message_str += f'Please react with \U0001F44D to approve or \U0001F44E to reject.\n'
         message = await GenericDisplayEmbed('Action Proposal', message_str, dm_channel).send_message()
-        await message.add_reaction('\U0001F44D')
-        await message.add_reaction('\U0001F44E')
+        # await message.add_reaction('\U0001F44D')
+        # await message.add_reaction('\U0001F44E')
 
-
-
-    @commands.Cog.listener()
-    async def on_reaction_add(self, reaction, user):
-        if user == self.bot.user:
-            return
-        if reaction.message.channel.name == self.persistence.get_admin_state()['channels']['dm']:
-            # Find the decision that this action belongs to
-            logging.info(f'Action reaction received: {reaction.emoji} in channel {reaction.message.channel.name}')
-            # if reaction message body contains 'Action Proposal'
-            if 'new action has been proposed' in reaction.message.embeds[0].description:
-                logging.info(f'Action reaction received: {reaction.emoji} in channel {reaction.message.channel.name}')
-                # TODO: Find a way to get the decision from the message
+    # TODO: Ideally I would like to listen for thumbs up/down reaction for action proposals
+    # @commands.Cog.listener()
+    # async def on_reaction_add(self, reaction, user):
+    #     if user == self.bot.user:
+    #         return
+    #     if reaction.message.channel.name == self.persistence.get_admin_state()['channels']['dm']:
+    #         # Find the decision that this action belongs to
+    #         logging.info(f'Action reaction received: {reaction.emoji} in channel {reaction.message.channel.name}')
+    #         # if reaction message body contains 'Action Proposal'
+    #         if 'new action has been proposed' in reaction.message.embeds[0].description:
+    #             logging.info(f'Action reaction received: {reaction.emoji} in channel {reaction.message.channel.name}')
+    #             # TODO: Find a way to get the decision from the message
                 
-                # if reaction.emoji == '\U0001F44D':
-                #     action.action_state = ActionState.APPROVED
-                #     await self.decisions.update_decision(decision)
-                #     await reaction.message.channel.send(f'Action {action.glyph} = {action.description} has been approved.')
-                #     await self.publish_decision(reaction.message.channel, decision)
-                # elif reaction.emoji == '\U0001F44E':
-                #     action.action_state = ActionState.REJECTED
-                #     await self.decisions.update_decision(decision)
-                #     await reaction.message.channel.send(f'Action {action.glyph} = {action.description} has been rejected.')
-                #     await self.publish_decision(reaction.message.channel, decision)
-                # else:
-                #     logging.error(f'Unknown reaction {reaction.emoji}')
-            # decision = self.decisions.find_decision_by_message_id(reaction.message.id)
-            # if not decision:
-            #     logging.error(f'Could not find decision for message {reaction.message.id}')
-            #     return
-            # action = next((x for x in decision.actions if x.glyph == reaction.emoji), None)
-            # if not action:
-            #     logging.error(f'Could not find action for reaction {reaction.emoji}')
-            #     return
+    #             # if reaction.emoji == '\U0001F44D':
+    #             #     action.state = ActionState.APPROVED
+    #             #     await self.decisions.update_decision(decision)
+    #             #     await reaction.message.channel.send(f'Action {action.glyph} = {action.description} has been approved.')
+    #             #     await self.publish_decision(reaction.message.channel, decision)
+    #             # elif reaction.emoji == '\U0001F44E':
+    #             #     action.state = ActionState.REJECTED
+    #             #     await self.decisions.update_decision(decision)
+    #             #     await reaction.message.channel.send(f'Action {action.glyph} = {action.description} has been rejected.')
+    #             #     await self.publish_decision(reaction.message.channel, decision)
+    #             # else:
+    #             #     logging.error(f'Unknown reaction {reaction.emoji}')
+    #         # decision = self.decisions.find_decision_by_message_id(reaction.message.id)
+    #         # if not decision:
+    #         #     logging.error(f'Could not find decision for message {reaction.message.id}')
+    #         #     return
+    #         # action = next((x for x in decision.actions if x.glyph == reaction.emoji), None)
+    #         # if not action:
+    #         #     logging.error(f'Could not find action for reaction {reaction.emoji}')
+    #         #     return
 
     @commands.command(name='updateaction')
     async def update_action(self,
@@ -319,7 +339,8 @@ class Actions(commands.Cog):
             ctx: The Discord context in which the command has been executed within.
             state: The state of the action to choose from.
         """
-        actions = await self.find_actions(guild_id=ctx.guild.id, action_state=state)
+        logging.info(f'Choosing action for guild  in state {state}')
+        actions = await self.find_actions(guild_id=ctx.guild.id, state=state)
         choices = []
         if not actions:
             return None
@@ -345,33 +366,33 @@ class Actions(commands.Cog):
 
     async def find_actions(self,
                         action_id: str = None,
-                        action_state: ActionState = None,
+                        state: ActionState = None,
                         guild_id: str = None):
         """
         Find an Action in state management based on filter criteria.
         params:
             action_id: The unique identifier of a Action to filter the results with.
-            action_state: The state of Actions to filter the results with.
+            state: The state of Actions to filter the results with.
             guild_id: The guild id of Actions to filter the results with.
         """
-        state = self.persistence.get_state()
-        state_enumerable = Enumerable(state['decisions'])
-        logging.info(f'Finding actions with id: {action_id}, state: {action_state}, guild_id: {guild_id}')
+        decisions = self.persistence.get_state()
+        decisions_enumerable = Enumerable(decisions['decisions'])
+        logging.info(f'Finding actions with id: {action_id}, state: {state}, guild_id: {guild_id}')
 
         # If an id is provided, return the decision with that id
         if action_id:
             # use pylinq to find actions with the provided id
-            action = state_enumerable.select_many(lambda x: x.actions).where(lambda x: x.id_ == action_id).first_or_default()
+            action = decisions_enumerable.select_many(lambda x: x.actions).where(lambda x: x.id_ == action_id).first_or_default()
             logging.info(f'Found action: {action}')
             return action
                 # TODO: Handle scenario where none are found of this id
         # If no id is provided, return all decisions with the provided state
-        elif action_state:
+        elif state:
             if guild_id:
-                state_enumerable = state_enumerable.where(lambda x: x.guild_id == guild_id)
-            state_enumerable = state_enumerable.select_many(lambda x: x.actions).where(lambda x: x.action_state == action_state)
-            logging.info(f'Found actions: {state_enumerable}')
-            logging.info(f'Found actions: {state_enumerable[0]}')
+                decisions_enumerable = decisions_enumerable.where(lambda x: x.guild_id == guild_id)
+            decisions_enumerable = decisions_enumerable.select_many(lambda x: x.actions).where(lambda x: x.state == state)
+            logging.info(f'Found actions: {decisions_enumerable}')
+            logging.info(f'Found actions: {decisions_enumerable[0]}')
                 # TODO: Handle scenario where none are found of this state
-            return state_enumerable
+            return decisions_enumerable
         return None

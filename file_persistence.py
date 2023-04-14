@@ -26,6 +26,7 @@ class file_persistence:
             return decisions
     
     def update_decision(self, decision):
+        logging.info(f'Updating decision {decision.id_}, {decision}.')
         decisions = self.get_state()
         # Find index of object to replace in the list
         index = -1

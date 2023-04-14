@@ -95,3 +95,19 @@ class AdminTools(Cog):
         theme = campaign_definition["theme"]
         msg = f'{description}\n\n\nCampaign Theme: {", ".join(theme)}'
         await GenericDisplayEmbed(title, description, channel).send_message()
+
+    def get_dm_channel(self, guild_id):
+        dm_state = self.state_management.get_admin_state()
+        dm_channel = dm_state['channels']['dm']
+        guild = self.bot.get_guild(guild_id)
+        return next((x for x in guild_id.channels if x.name == dm_channel), None)
+
+    def get_publish_channel(self, guild_id):
+        admin_state = self.state_management.get_admin_state()
+        publish_channel = admin_state['channels']['publish']
+        return next((x for x in guild_id.channels if x.name == publish_channel), None)
+    
+    def get_notifications_channel(self, guild_id):
+        admin_state = self.state_management.get_admin_state()
+        notifications_channel = admin_state['channels']['notifications']
+        return next((x for x in guild_id.channels if x.name == notifications_channel), None)

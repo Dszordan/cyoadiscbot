@@ -321,7 +321,7 @@ class Decisions(commands.Cog):
         """
         state = self.state_management.get_state()
         state_enumerable = Enumerable(state['decisions'])
-        logging.info(f'Finding decisions with id: {decision_id}, state: {decision_state}, guild_id: {guild_id}')
+        # logging.info(f'Finding decisions with id: {decision_id}, state: {decision_state}, guild_id: {guild_id}')
 
         # If an id is provided, return the decision with that id
         if decision_id:
@@ -334,7 +334,7 @@ class Decisions(commands.Cog):
             if guild_id:
                 state_enumerable = state_enumerable.where(lambda x: x.guild_id == guild_id)
             state_enumerable = state_enumerable.where(lambda x: x.state == decision_state)
-            logging.info(f'Found decisions: {state_enumerable}')
+            # logging.info(f'Found decisions: {state_enumerable}')
                 # TODO: Handle scenario where none are found of this state
             return state_enumerable
         return None

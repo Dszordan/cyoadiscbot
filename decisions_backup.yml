@@ -2,6 +2,7 @@ decisions:
 - &id001 !!python/object:model.decision.Decision
   actions:
   - &id002 !!python/object:model.decision.Action
+    author_id: 140312429396623361
     description: Ultra Action
     glyph: "\U0001F638"
     id_: 3meXWNjQYozP8qr2QZYZ4h
@@ -13,37 +14,41 @@ decisions:
   message_id: 1088282152132694058
   publish_time: '2023-03-22 22:04:43.942693'
   resolve_time: '2023-03-22 22:03:00'
-  state: &id004 !!python/object/apply:model.decision.DecisionState
+  state: &id005 !!python/object/apply:model.decision.DecisionState
   - 3
   timeout: null
   title: Cool Title
   voted_action: *id002
-- &id003 !!python/object:model.decision.Decision
+- &id004 !!python/object:model.decision.Decision
   actions:
-  - &id005 !!python/object:model.decision.Action
+  - &id006 !!python/object:model.decision.Action
+    author_id: 140312429396623361
     description: Approach the window, open the shutters.
     glyph: "\U0001FA9F"
     id_: EveKkJNjWacSJFwNUYU3eh
     next_decision: null
-    previous_decision: *id003
+    previous_decision: *id004
   - !!python/object:model.decision.Action
+    author_id: 140312429396623361
     description: Read through the sheaf of papers.
     glyph: "\U0001F9FB"
     id_: Me6rm3QZ8TnyukHTSidYP2
     next_decision: null
-    previous_decision: *id003
+    previous_decision: *id004
   - !!python/object:model.decision.Action
+    author_id: 140312429396623361
     description: Dance
     glyph: "\U0001F483"
     id_: fEYyskudJf86V8bz4K9FPm
     next_decision: null
-    previous_decision: *id003
+    previous_decision: *id004
   - !!python/object:model.decision.Action
+    author_id: 140312429396623361
     description: Sleep
     glyph: "\U0001F6CC"
     id_: Th6YXHojF5pcaE8Z2V6AT3
     next_decision: null
-    previous_decision: *id003
+    previous_decision: *id004
   body: You hear yourself gasp, unsure if it's what woke you or if it were just a
     symptom of the cause. You awake as you had plenty of mornings prior - sweating,
     short of breath, hands shielding face. It takes a moment to calm yourself, staring
@@ -58,38 +63,226 @@ decisions:
   message_id: 1089687661142351892
   publish_time: '2023-03-26 19:09:43.544834'
   resolve_time: 2023-03-26 19:09:39.608113
-  state: *id004
+  state: *id005
   title: Morning
-  voted_action: *id005
-- &id006 !!python/object:model.decision.Decision
+  voted_action: *id006
+- &id009 !!python/object:model.decision.Decision
   actions:
-  - &id007 !!python/object:model.decision.Action
-    description: Approach the window, open the shutters.
-    glyph: "\U0001FA9F"
-    id_: 342zzivtFoQnWyGsNZWVo9
-    next_decision: null
-    previous_decision: *id006
   - !!python/object:model.decision.Action
-    description: Read through the sheaf of papers.
-    glyph: "\U0001F4DC"
-    id_: 6rAxbWRrYweAa6scMcgaEn
+    author_id: 140312429396623361
+    description: test
+    glyph: "\U0001F9EA"
+    id_: 8CGzqErcuBm7ESeFNTrRYn
     next_decision: null
-    previous_decision: *id006
-  body: "You hear yourself gasp, unsure if it's what woke you or if it were just a\
-    \ symptom of the cause. You awake as you had plenty of mornings prior - sweating,\
-    \ short of breath, hands shielding face. It takes a moment to calm yourself, staring\
-    \ at the high ceiling trying to erase the last few dredges of that dream from\
-    \ your memory. Usually you find it easier to think of the day ahead to erase the\
-    \ past and it is just enough to rouse you to your feet. You look about the small,\
-    \ stately room. The windows wooden shutters blocking the view. The breeze beyond\
-    \ just enough to steal through the slats and a sheaf of papers rustle in response.\
-    \ Your feet hit the cool tile floor. \n\n**What do you always do first thing in\
-    \ the morning?**"
-  guild_id: 578770352335880212
-  id_: CtxjUSKFuJHJzBirfopPP4
-  message_id: 1089733528733896844
-  publish_time: '2023-03-26 22:11:59.722240'
-  resolve_time: 2023-03-27 14:11:57.341938
-  state: *id004
-  title: Morning
-  voted_action: *id007
+    previous_decision: *id009
+  - !!python/object:model.decision.Action
+    author_id: 140312429396623361
+    description: testtt
+    glyph: "\U0001F3BD"
+    id_: 34SDECopiYH5eHtxDdaRpn
+    next_decision: null
+    previous_decision: *id009
+  - !!python/object:model.decision.Action
+    author_id: 140312429396623361
+    description: test1
+    glyph: "\U0001F4FB"
+    id_: oNgzmR6opzEUut3VmX98Ho
+    next_decision: null
+    previous_decision: *id009
+  - &id010 !!python/object:model.decision.Action
+    author_id: 140312429396623361
+    description: etstsfcd
+    glyph: "\u26FD"
+    id_: vA4VzXosq9jxG3CwnKLbYH
+    next_decision: null
+    previous_decision: *id009
+  - !!python/object:model.decision.Action
+    author_id: 140312429396623361
+    description: DOIT
+    glyph: "\U0001F6AF"
+    id_: Xr79NciWrR7hGisPdndxY5
+    next_decision: null
+    previous_decision: *id009
+  - !!python/object:model.decision.Action
+    author_id: 140312429396623361
+    description: fkfkdkf
+    glyph: "\U0001F518"
+    id_: CZn6yZUAcEteqyQGSZtxr7
+    next_decision: null
+    previous_decision: *id009
+  body: Imagine that something really cool was in here.
+  guild_id: 760201870999683154
+  id_: 3m5H6hD4nW79k4fATKZeiT
+  message_id: 1095541715043090576
+  publish_time: '2023-04-11 22:51:39.772148'
+  resolve_time: 2023-04-11 23:56:38.161402
+  state: *id005
+  title: Super Cool Decision
+  voted_action: *id010
+- &id011 !!python/object:model.decision.Decision
+  actions:
+  - !!python/object:model.decision.Action
+    author_id: 140312429396623361
+    description: Coollll
+    glyph: "\U0001F192"
+    id_: NAyBosM9LJcnd2xgN8hj3T
+    next_decision: null
+    previous_decision: *id011
+  - !!python/object:model.decision.Action
+    author_id: 140312429396623361
+    description: test
+    glyph: "\U0001F9EA"
+    id_: 36uEDz7yQ7LpGAoiqUZAzV
+    next_decision: null
+    previous_decision: *id011
+  - &id012 !!python/object:model.decision.Action
+    author_id: 140312429396623361
+    description: testinggg
+    glyph: "\U0001F697"
+    id_: qWjrKMJLLGRhDXvd8gpHuM
+    next_decision: null
+    previous_decision: *id011
+  body: Cooooool
+  guild_id: 760201870999683154
+  id_: 3esaSDdttVMDUue7spujDT
+  message_id: 1094077146420490282
+  publish_time: '2023-04-07 21:51:58.487079'
+  resolve_time: 2023-04-07 21:59:55.900260
+  state: *id005
+  title: New
+  voted_action: *id012
+- &id013 !!python/object:model.decision.Decision
+  actions:
+  - &id014 !!python/object:model.decision.Action
+    author_id: 140312429396623361
+    description: New ACtion
+    glyph: "\U0001F195"
+    id_: 9xkJ8yX3FEyQcWD2hK7nAB
+    next_decision: null
+    previous_decision: *id013
+    state: *id003
+  - &id015 !!python/object:model.decision.Action
+    author_id: 140312429396623361
+    description: Csaklfjda
+    glyph: "\U0001F9EA"
+    id_: 39842UTb6xuJdkMa4Pu6Kb
+    next_decision: null
+    previous_decision: *id013
+  - *id014
+  body: something really cool
+  guild_id: 760201870999683154
+  id_: 3WrYDWuR2EDBmT3TRqyymG
+  message_id: 1095717073298141294
+  publish_time: '2023-04-12 10:28:28.614888'
+  resolve_time: 2023-04-12 10:48:27.218532
+  state: *id005
+  title: testing
+  voted_action: *id015
+- &id016 !!python/object:model.decision.Decision
+  actions:
+  - &id017 !!python/object:model.decision.Action
+    author_id: 140312429396623361
+    description: New Action
+    glyph: "\U0001F195"
+    id_: gNDwjrHDdPy5tTmxh4b5Bf
+    next_decision: null
+    previous_decision: *id016
+    state: *id003
+  - *id017
+  - &id018 !!python/object:model.decision.Action
+    author_id: 140312429396623361
+    description: Cool Action
+    glyph: "\U0001F192"
+    id_: vJnCJsH3cUUvVFxRwVKWnE
+    next_decision: null
+    previous_decision: *id016
+    state: *id003
+  - *id018
+  body: This is a test of proposed actions
+  guild_id: 760201870999683154
+  id_: oVbqvtNVR9bTHM5J4PYM7B
+  message_id: 1095751696141013143
+  publish_time: '2023-04-12 12:46:03.020133'
+  resolve_time: 2023-04-12 14:16:00.738127
+  state: *id005
+  title: testaction
+  voted_action: *id017
+- &id019 !!python/object:model.decision.Decision
+  actions:
+  - &id020 !!python/object:model.decision.Action
+    author_id: null
+    description: New Action
+    glyph: "\U0001F42B"
+    id_: 3kYyHfL7NsTHSwL34ScycD
+    next_decision: null
+    previous_decision: *id019
+  - !!python/object:model.decision.Action
+    - 1
+    author_id: 140312429396623361
+    description: Testinac
+    glyph: "\U0001F9EA"
+    id_: 3QH4WP7jKg8nrjjy8TEnQX
+    next_decision: null
+    previous_decision: *id019
+    state: &id023 !!python/object/apply:model.decision.ActionState
+    - 2
+  body: radical
+  guild_id: 760201870999683154
+  id_: UwFiLWjDErkSAPZYar3EDf
+  message_id: 1095873421025480714
+  publish_time: '2023-04-12 20:49:44.239784'
+  resolve_time: 2023-04-13 02:09:42.004154
+  state: *id005
+  title: Testing
+  voted_action: *id020
+- &id021 !!python/object:model.decision.Decision
+  actions:
+  - !!python/object:model.decision.Action
+    author_id: 140312429396623361
+    description: test
+    glyph: "\U0001F9EA"
+    id_: MyfcDX7i9ADHpVRTsLbfP4
+    next_decision: null
+    previous_decision: *id021
+  - !!python/object:model.decision.Action
+    author_id: 140312429396623361
+    description: coolaction
+    glyph: "\U0001F192"
+    id_: 3FBiiCaVATwVbRbvEnqYFs
+    next_decision: null
+    previous_decision: *id021
+    state: *id023
+  - !!python/object:model.decision.Action
+    author_id: 140312429396623361
+    description: action
+    glyph: "\U0001F483"
+    id_: DEYNRiMWuqyQ2CS6ujm3MF
+    next_decision: null
+    previous_decision: *id021
+    state: *id023
+  - !!python/object:model.decision.Action
+    author_id: 140312429396623361
+    description: newaction
+    glyph: "\U0001F60E"
+    id_: 3LmUXYiFRe7ZdPYnqocFzC
+    next_decision: null
+    previous_decision: *id021
+    state: *id023
+  - !!python/object:model.decision.Action
+    author_id: 140312429396623361
+    description: fuckoff
+    glyph: "\U0001F621"
+    id_: wUyGUvwVK28YvXPFqy8ZEd
+    next_decision: null
+    previous_decision: *id021
+    state: *id023
+  body: test
+  guild_id: 760201870999683154
+  id_: pujFgHBv4922CsJif8Cagb
+  message_id: 1096084057382719518
+  publish_time: '2023-04-13 10:46:44.182322'
+  resolve_time: 2023-04-14 03:25:42.708819
+  state: !!python/object/apply:model.decision.DecisionState
+  - 2
+  title: test
+  voted_action: null
